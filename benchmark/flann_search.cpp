@@ -25,7 +25,6 @@ int main (int argc, char *argv[]) {
     string query_path;
     string output_path;
     string eval_path;
-    string kgraph_path;
     unsigned K;
 
     po::options_description desc_visible("General options");
@@ -35,7 +34,6 @@ int main (int argc, char *argv[]) {
     ("index", po::value(&index_path), "index path")
     ("query", po::value(&query_path), "query path")
     ("output", po::value(&output_path), "output_path")
-    ("kgraph", po::value(&kgraph_path), "kgraph_path")
     ("eval", po::value(&eval_path), "eval path")
     (",K", po::value(&K)->default_value(20), "")
     ("checks,C", po::value(&params.checks), "")
@@ -79,18 +77,11 @@ int main (int argc, char *argv[]) {
     boost::timer::auto_cpu_timer timer;
     cerr << "Loading..." << endl;
     flann::Index<flann::L2<float>> index(fdata, flann::SavedIndexParams(index_path));
-    kgraph::KGraph kgraph;
-    if (kgraph_path.size()) {
-        kgraph.load(kgraph_path);
-    }
     timer.stop();
     timer.report();
     timer.start();
     cerr << "Searching..." << endl;
     index.knnSearch(fquery, fresult, fdists, K, params);
-    if (kgraph_path.size()) {
-        cerr << "Boosting with KGraph..." << endl;
-    }
     timer.stop();
     timer.report();
     if (output_path.size()) {
