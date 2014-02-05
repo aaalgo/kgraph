@@ -9,12 +9,14 @@ LDFLAGS += $(OPENMP)
 #LDLIBS += -lopencv_flann -lopencv_core -lboost_timer -lboost_chrono -lboost_system -lboost_program_options  -lpthread -lm -lz
 LDLIBS += -lboost_timer -lboost_chrono -lboost_system -lboost_program_options -lm
 
-.PHONY:	all clean
+.PHONY:	benchmark all clean
 
 PROGS = index search 
 
 all:	$(PROGS)
 
+benchmark:
+	make -C benchmark
 
 index:	kgraph.cpp index.cpp
 
