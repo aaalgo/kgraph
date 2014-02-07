@@ -94,10 +94,16 @@ int main (int argc, char *argv[]) {
         KGraph kgraph(index_path);
         boost::timer::auto_cpu_timer timer;
         cerr << "Searching..." << endl;
-#pragma omp parallel for
+
+        float cost = 0;
+#pragma omp parallel for reduction(+:cost)
         for (unsigned i = 0; i < query.size(); ++i) {
-            kgraph.search(oracle.query(query[i]), params, result[i]);
+            KGraph::SearchInfo info;
+            kgraph.search(oracle.query(query[i]), params, result[i], &info);
+            cost += info.cost;
         }
+        cost /= query.size();
+        cerr << "Cost: " << cost << endl;
     }
     if (output_path.size()) {
         result.save_lshkit(output_path);

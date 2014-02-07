@@ -8,6 +8,7 @@ namespace kgraph {
     typedef Matrix<float> FloatDataMatrix;
     typedef Matrix<unsigned, 1> IndexMatrix;
 
+    // both groundtruth and results should be sorted
     float AverageRecall (IndexMatrix const &eval, IndexMatrix const &result, unsigned K = 0) {
         if (K == 0) {
             K = result.dim();

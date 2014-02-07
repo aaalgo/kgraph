@@ -8,7 +8,7 @@ LDLIBS += -lflann_cpp_s -lflann_s -lboost_timer -lboost_chrono -lboost_system -l
 
 .PHONY:	all clean
 
-PROGS = flann_index flann_search split
+PROGS = flann_index flann_search split lshkit2fvec fvec2lshkit
 
 all:	$(PROGS)
 

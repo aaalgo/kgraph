@@ -255,7 +255,11 @@ public:
         }
 #pragma omp parallel
         {
+#ifdef _OPENMP
             mt19937 rng(seed ^ omp_get_thread_num());
+#else
+            mt19937 rng(seed);
+#endif
             vector<unsigned> random(params.K + 1);
 #pragma omp for
             for (unsigned n = 0; n < N; ++n) {
