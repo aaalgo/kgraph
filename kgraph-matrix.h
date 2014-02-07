@@ -138,6 +138,7 @@ namespace kgraph {
             : rows(m.size()), cols(m.dim()), stride(m.step()), data(reinterpret_cast<uint8_t const *>(m[0])) {
         }
 
+#ifndef __AVX__
 #ifdef FLANN_DATASET_H_
         MatrixProxy (flann::Matrix<DATA_TYPE> const &m)
             : rows(m.rows), cols(m.cols), stride(m.stride), data(m.data) {
@@ -149,6 +150,7 @@ namespace kgraph {
             : rows(m.rows), cols(m.cols), stride(m.step), data(m.data) {
             BOOST_VERIFY(stride % KGRAPH_MATRIX_ALIGN == 0);
         }
+#endif
 #endif
         unsigned size () const {
             return rows;
