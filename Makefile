@@ -2,7 +2,7 @@ CC=g++
 
 ARCH = -msse2 #-march=corei7-avx
 #OPT = -O3 -fprofile-arcs
-OPT = -O3 -fbranch-probabilities
+OPT = -O3 
 OPENMP = -fopenmp
 CXXFLAGS += -g -std=c++11 -I. $(OPENMP) $(OPT) $(ARCH)
 LDFLAGS += $(OPENMP) 

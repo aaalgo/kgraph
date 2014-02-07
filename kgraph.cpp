@@ -130,6 +130,26 @@ namespace kgraph {
         return i;
     }
 
+    static inline unsigned UpdateKnnListNoCheckId (Neighbor *addr, unsigned K, Neighbor nn) {
+        // find the location to insert
+        unsigned K_1 = K - 1;
+        if (nn.dist > addr[K_1].dist) return K;
+        unsigned i = K_1;
+        while (i > 0) {
+            unsigned j = i - 1;
+            if (addr[j].dist < nn.dist) break;
+            i = j;
+        }
+        // i <= K-1
+        unsigned j = K_1;
+        while (j > i) {
+            addr[j] = addr[j-1];
+            --j;
+        }
+        addr[i] = nn;
+        return i;
+    }
+
     void LinearSearch (IndexOracle const &oracle, unsigned i, unsigned K, vector<Neighbor> *pnns) {
         vector<Neighbor> nns(K);
         unsigned N = oracle.size();
@@ -150,7 +170,7 @@ namespace kgraph {
             if (nn.id == i) ++nn.id;
             if (nn.id >= N) break;
             nn.dist = oracle(i, nn.id);
-            UpdateKnnList(&nns[0], K, nn);
+            UpdateKnnListNoCheckId(&nns[0], K, nn);
             ++nn.id;
         }
         pnns->swap(nns);
@@ -168,7 +188,7 @@ namespace kgraph {
         }
         sort(nns.begin(), nns.end());
         for (unsigned n = K; n < N; ++n) {
-            UpdateKnnList(&nns[0], K, Neighbor(n, operator()(n)));
+            UpdateKnnListNoCheckId(&nns[0], K, Neighbor(n, operator()(n)));
         }
         if (ids) {
             for (unsigned k = 0; k < K; ++k) {
@@ -519,10 +539,11 @@ public:
                 unsigned cur = knn[k].id;
                 for (unsigned id: graph[cur]) {
                     if (flags[id]) continue;
+                    flags[id] = true;
                     ++n_comps;
                     Neighbor nn(id, oracle(id));
                     if (nn.dist < knn.back().dist) {
-                        unsigned r = UpdateKnnList(&knn[0], params.K, nn);
+                        unsigned r = UpdateKnnListNoCheckId(&knn[0], params.K, nn);
                         if (r < nk) {
                             nk = r;
                             ++updates;
