@@ -1,8 +1,10 @@
 #ifndef WDONG_KGRAPH_MATRIX
 #define WDONG_KGRAPH_MATRIX
 
+#include <malloc.h>
 #include <vector>
 #include <fstream>
+#include <stdexcept>
 
 #ifdef __GNUC__
 #ifdef __AVX__
@@ -18,6 +20,7 @@
 
 namespace kgraph {
     using std::vector;
+    using std::runtime_error;
 
     namespace metric {
         struct l2sqr {
@@ -39,18 +42,26 @@ namespace kgraph {
         unsigned col;
         unsigned row;
         size_t stride;
-        vector<char> data;
+        char *data;
 
         void reset (unsigned r, unsigned c) {
             row = r;
             col = c;
             stride = (sizeof(T) * c + A - 1) / A * A;
+            /*
             data.resize(row * stride);
+            */
+            if (data) free(data);
+            data = (char *)memalign(A, row * stride); // SSE instruction needs data to be aligned
+            if (!data) throw runtime_error("memalign");
         }
     public:
-        Matrix (): col(0), row(0), stride(0) {}
+        Matrix (): col(0), row(0), stride(0), data(0) {}
         Matrix (unsigned r, unsigned c) {
             reset(r, c);
+        }
+        ~Matrix () {
+            if (data) free(data);
         }
         unsigned size () const {
             return row;
@@ -79,7 +90,7 @@ namespace kgraph {
             unsigned line = sizeof(T) * dim + gap;
             unsigned N =  size / line;
             reset(N, dim);
-            fill(data.begin(), data.end(), 0);
+            memset(data, 0, row * stride);
             is.seekg(skip, std::ios::beg);
             for (unsigned i = 0; i < N; ++i) {
                 is.read(&data[stride * i], sizeof(T) * dim);
@@ -204,9 +215,9 @@ namespace kgraph { namespace metric {
             const float *r = t2;
             const float *e_l = l + DD;
             const float *e_r = r + DD;
-            float unpack[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+            float unpack[8] __attribute__ ((aligned (32))) = {0, 0, 0, 0, 0, 0, 0, 0};
             float ret = 0.0;
-            sum = _mm256_loadu_ps(unpack);
+            sum = _mm256_load_ps(unpack);
             switch (DR) {
                 case 24:
                     AVX_L2SQR(e_l+16, e_r+16, sum, l2, r2);
@@ -249,9 +260,9 @@ namespace kgraph { namespace metric {
             const float *r = t2;
             const float *e_l = l + DD;
             const float *e_r = r + DD;
-            float unpack[4] = {0, 0, 0, 0};
+            float unpack[4] __attribute__ ((aligned (16))) = {0, 0, 0, 0};
             float ret = 0.0;
-            sum = _mm_loadu_ps(unpack);
+            sum = _mm_load_ps(unpack);
             switch (DR) {
                 case 12:
                     SSE_L2SQR(e_l+8, e_r+8, sum, l2, r2);

@@ -1,6 +1,7 @@
 CC=g++ 
 
-ARCH = -msse2 #-march=corei7-avx
+#ARCH = -msse2
+ARCH = -march=corei7-avx
 #OPT = -O3 -fprofile-arcs
 OPT = -O3 
 OPENMP = -fopenmp
