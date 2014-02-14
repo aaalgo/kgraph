@@ -81,6 +81,9 @@ namespace kgraph {
         T *operator [] (unsigned i) {
             return reinterpret_cast<T *>(&data[stride * i]);
         }
+        void zero () {
+            memset(data, 0, row * stride);
+        }
         void load (const std::string &path, unsigned dim, unsigned skip = 0, unsigned gap = 0) {
             std::ifstream is(path.c_str(), std::ios::binary);
             BOOST_VERIFY(is);
@@ -90,7 +93,7 @@ namespace kgraph {
             unsigned line = sizeof(T) * dim + gap;
             unsigned N =  size / line;
             reset(N, dim);
-            memset(data, 0, row * stride);
+            zero();
             is.seekg(skip, std::ios::beg);
             for (unsigned i = 0; i < N; ++i) {
                 is.read(&data[stride * i], sizeof(T) * dim);

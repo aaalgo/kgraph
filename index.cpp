@@ -6,6 +6,7 @@
 */
 
 #include <sys/time.h>
+#include <random>
 #include <iomanip>
 #include <boost/tr1/random.hpp>
 #include <boost/format.hpp>
@@ -26,6 +27,7 @@ int main (int argc, char *argv[]) {
     unsigned D;
     unsigned skip;
     unsigned gap;
+    unsigned synthetic;
     float noise;
 
     bool lshkit = true;
@@ -51,6 +53,7 @@ int main (int argc, char *argv[]) {
     ("skip", po::value(&skip)->default_value(0), "see format")
     ("gap", po::value(&gap)->default_value(0), "see format")
     ("raw", "read raw binary file, need to specify D.")
+    ("synthetic", po::value(&synthetic)->default_value(0), "generate synthetic data, for performance evaluation only, specify number of points")
     ;
 
     po::options_description desc("Allowed options");
@@ -68,7 +71,7 @@ int main (int argc, char *argv[]) {
         lshkit = false;
     }
 
-    if (vm.count("help") || (vm.count("data") == 0) || (vm.count("dim") == 0 && !lshkit)) {
+    if (vm.count("help") || (vm.count("data") == 0 && synthetic == 0) || (vm.count("dim") == 0 && !lshkit) || (synthetic && (vm.count("dim") == 0 || vm.count("data")))) {
         cout << "Usage: index [OTHER OPTIONS]... INPUT [OUTPUT]" << endl;
         cout << "Construct k-nearest neighbor graph for Euclidean spaces using L2 distance as similarity measure..\n" << endl;
         cout << desc_visible << endl;
@@ -87,7 +90,7 @@ int main (int argc, char *argv[]) {
         return 0;
     }
 
-    if (lshkit) {   // read dimension information from the data file
+    if (lshkit && (synthetic == 0)) {   // read dimension information from the data file
         static const unsigned LSHKIT_HEADER = 3;
         ifstream is(data_path.c_str(), ios::binary);
         unsigned header[LSHKIT_HEADER]; /* entry size, row, col */
@@ -101,7 +104,22 @@ int main (int argc, char *argv[]) {
     }
 
     Matrix<float> data;
-    data.load(data_path, D, skip, gap);
+    if (synthetic) {
+        data.resize(synthetic, D);
+        cerr << "Generating synthetic data..." << endl;
+        default_random_engine rng(params.seed);
+        uniform_real_distribution<float> distribution(-1.0, 1.0);
+        data.zero(); // important to do that
+        for (unsigned i = 0; i < synthetic; ++i) {
+            float *row = data[i];
+            for (unsigned j = 0; j < D; ++j) {
+                row[j] = distribution(rng);
+            }
+        }
+    }
+    else {
+        data.load(data_path, D, skip, gap);
+    }
     if (noise != 0) {
         tr1::ranlux64_base_01 rng;
         float sum = 0, sum2 = 0;
