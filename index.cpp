@@ -44,7 +44,7 @@ int main (int argc, char *argv[]) {
     po::options_description desc_hidden("Expert options");
     desc_hidden.add_options()
     ("iterations,I", po::value(&params.iterations)->default_value(100), "expert")
-    (",S", po::value(&params.S)->default_value(20), "expert")
+    (",S", po::value(&params.S)->default_value(0), "expert, if S = 0 (default) then K will be used")
     ("delta", po::value(&params.delta)->default_value(0.005), "expert")
     ("noise", po::value(&noise)->default_value(0), "expert")
     ("recall", po::value(&params.recall)->default_value(0.98), "expert")
@@ -88,6 +88,10 @@ int main (int argc, char *argv[]) {
                 "  recall: estimated recall, or 0 if no control is specified.\n"
                 "  cost: number of similarity evaluate / [N*(N-1)/2, the brute force cost].\n";
         return 0;
+    }
+
+    if (params.S == 0) {
+        params.S = params.K;
     }
 
     if (lshkit && (synthetic == 0)) {   // read dimension information from the data file

@@ -34,6 +34,7 @@ namespace kgraph {
         }
         return sum / result.size();
     }
+
 }
 
 #endif

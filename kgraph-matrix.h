@@ -35,6 +35,12 @@ namespace kgraph {
                 return r;
             }
         };
+        struct l2 {
+            template <typename T>
+            static float apply (T const *t1, T const *t2, unsigned dim) {
+                return sqrt(l2sqr::apply<T>(t1, t2, dim));
+            }
+        };
     }
 
     template <typename T, unsigned A = KGRAPH_MATRIX_ALIGN>
@@ -255,37 +261,37 @@ namespace kgraph { namespace metric {
 namespace kgraph { namespace metric {
     template <>
     float l2sqr::apply<float> (float const *t1, float const *t2, unsigned dim) {
-            __m128 sum;
-            __m128 l0, l1, l2, l3;
-            __m128 r0, r1, r2, r3;
-            unsigned D = (dim + 3) & ~3U;
-            unsigned DR = D % 16;
-            unsigned DD = D - DR;
-            const float *l = t1;
-            const float *r = t2;
-            const float *e_l = l + DD;
-            const float *e_r = r + DD;
-            float unpack[4] __attribute__ ((aligned (16))) = {0, 0, 0, 0};
-            float ret = 0.0;
-            sum = _mm_load_ps(unpack);
-            switch (DR) {
-                case 12:
-                    SSE_L2SQR(e_l+8, e_r+8, sum, l2, r2);
-                case 8:
-                    SSE_L2SQR(e_l+4, e_r+4, sum, l1, r1);
-                case 4:
-                    SSE_L2SQR(e_l, e_r, sum, l0, r0);
-            }
-            for (unsigned i = 0; i < DD; i += 16, l += 16, r += 16) {
-                SSE_L2SQR(l, r, sum, l0, r0);
-                SSE_L2SQR(l + 4, r + 4, sum, l1, r1);
-                SSE_L2SQR(l + 8, r + 8, sum, l2, r2);
-                SSE_L2SQR(l + 12, r + 12, sum, l3, r3);
-            }
-            _mm_storeu_ps(unpack, sum);
-            ret = unpack[0] + unpack[1] + unpack[2] + unpack[3];
-            return ret;//sqrt(ret);
+        __m128 sum;
+        __m128 l0, l1, l2, l3;
+        __m128 r0, r1, r2, r3;
+        unsigned D = (dim + 3) & ~3U;
+        unsigned DR = D % 16;
+        unsigned DD = D - DR;
+        const float *l = t1;
+        const float *r = t2;
+        const float *e_l = l + DD;
+        const float *e_r = r + DD;
+        float unpack[4] __attribute__ ((aligned (16))) = {0, 0, 0, 0};
+        float ret = 0.0;
+        sum = _mm_load_ps(unpack);
+        switch (DR) {
+            case 12:
+                SSE_L2SQR(e_l+8, e_r+8, sum, l2, r2);
+            case 8:
+                SSE_L2SQR(e_l+4, e_r+4, sum, l1, r1);
+            case 4:
+                SSE_L2SQR(e_l, e_r, sum, l0, r0);
         }
+        for (unsigned i = 0; i < DD; i += 16, l += 16, r += 16) {
+            SSE_L2SQR(l, r, sum, l0, r0);
+            SSE_L2SQR(l + 4, r + 4, sum, l1, r1);
+            SSE_L2SQR(l + 8, r + 8, sum, l2, r2);
+            SSE_L2SQR(l + 12, r + 12, sum, l3, r3);
+        }
+        _mm_storeu_ps(unpack, sum);
+        ret = unpack[0] + unpack[1] + unpack[2] + unpack[3];
+        return ret;//sqrt(ret);
+    }
 }}
 
 #endif
