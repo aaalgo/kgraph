@@ -92,6 +92,8 @@ int main (int argc, char *argv[]) {
     string data_path;
     string index_path;
     string output_path;
+    unsigned D;
+    unsigned skip, gap;
     bool lshkit = true;
 
     po::options_description desc_visible("General options");
@@ -100,6 +102,10 @@ int main (int argc, char *argv[]) {
     ("data", po::value(&data_path), "input path")
     ("index", po::value(&index_path), "index path")
     ("output", po::value(&output_path), "output path")
+    ("dim,D", po::value(&D), "dimension, see format")
+    ("skip", po::value(&skip)->default_value(0), "see format")
+    ("gap", po::value(&gap)->default_value(0), "see format")
+    ("raw", "read raw binary file, need to specify D.")
     ;
     po::options_description desc("Allowed options");
     desc.add(desc_visible);
@@ -113,15 +119,16 @@ int main (int argc, char *argv[]) {
     po::store(po::command_line_parser(argc, argv).options(desc).positional(p).run(), vm);
     po::notify(vm); 
 
+    if (vm.count("raw") == 1) {
+        lshkit = false;
+    }
+
     if (vm.count("help") || (vm.count("data") == 0) || (vm.count("index") == 0)) {
         cout << desc_visible << endl;
         return 0;
     }
 
-    unsigned D;
-    unsigned skip, gap;
-
-    {
+    if (lshkit) {
         static const unsigned LSHKIT_HEADER = 3;
         ifstream is(data_path.c_str(), ios::binary);
         unsigned header[LSHKIT_HEADER]; /* entry size, row, col */
@@ -136,10 +143,12 @@ int main (int argc, char *argv[]) {
 
     Matrix<float> data;
     data.load(data_path, D, skip, gap);
-
     MatrixOracle<float, metric::l2sqr> oracle(data);
+
     Prune prune(oracle, index_path);
-    prune.save(output_path);
+    if (vm.count("output")) {
+        prune.save(output_path);
+    }
 
     return 0;
 }
