@@ -13,16 +13,22 @@ LDLIBS += -lboost_timer -lboost_chrono -lboost_system -lboost_program_options -l
 
 .PHONY:	benchmark all clean
 
-PROGS = index search 
+COMMON = kgraph.o
+
+PROGS = index search  prune stat
 
 all:	$(PROGS)
 
 benchmark:
 	make -C benchmark
 
-index:	kgraph.cpp index.cpp
+index:	index.cpp $(COMMON)
 
-search:	kgraph.cpp search.cpp
+search:	search.cpp $(COMMON)
+
+prune: prune.cpp $(COMMON)
+
+#stat: stat.cpp kgraph.cpp
 
 clean:
 	rm -f $(PROGS)
