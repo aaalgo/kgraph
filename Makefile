@@ -1,7 +1,7 @@
 CC=g++ 
 
-#ARCH = -msse2
-ARCH = -march=corei7-avx
+ARCH = -msse2
+#ARCH = -march=corei7-avx
 #OPT = -O3 -fprofile-arcs
 OPT = -O3 
 OPENMP = -fopenmp
@@ -14,21 +14,19 @@ LDLIBS += -lboost_timer -lboost_chrono -lboost_system -lboost_program_options -l
 .PHONY:	benchmark all clean
 
 COMMON = kgraph.o
-
-PROGS = index search  prune stat
+HEADERS = kgraph.h kgraph-matrix.h kgraph-util.h
+PROGS = index search prune stat index-b
 
 all:	$(PROGS)
 
 benchmark:
 	make -C benchmark
 
-index:	index.cpp $(COMMON)
+$(PROGS):	%:	%.cpp $(HEADERS) $(COMMON)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $*.cpp $(COMMON) $(LDLIBS)
 
-search:	search.cpp $(COMMON)
-
-prune: prune.cpp $(COMMON)
-
-#stat: stat.cpp kgraph.cpp
+%.o:	%.cpp $(HEADERS)
+	$(CXX) $(CXXFLAGS) -c $*.cpp 
 
 clean:
 	rm -f $(PROGS)

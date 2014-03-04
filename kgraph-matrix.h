@@ -28,7 +28,7 @@ namespace kgraph {
             static float apply (T const *t1, T const *t2, unsigned dim) {
                 float r = 0;
                 for (unsigned i = 0; i < dim; ++i) {
-                    T v = (t1 - t2);
+                    float v = float(t1[i]) - float(t2[i]);
                     v *= v;
                     r += v;
                 }
@@ -63,7 +63,7 @@ namespace kgraph {
         }
     public:
         Matrix (): col(0), row(0), stride(0), data(0) {}
-        Matrix (unsigned r, unsigned c) {
+        Matrix (unsigned r, unsigned c): data(0) {
             reset(r, c);
         }
         ~Matrix () {
@@ -291,6 +291,67 @@ namespace kgraph { namespace metric {
         _mm_storeu_ps(unpack, sum);
         ret = unpack[0] + unpack[1] + unpack[2] + unpack[3];
         return ret;//sqrt(ret);
+    }
+}}
+
+/*
+template <typename T>
+void print_128 (__m128i v) {
+    static unsigned constexpr L = 16 / sizeof(T);
+    T unpack[L] __attribute__ ((aligned (16)));
+    _mm_store_si128((__m128i *)unpack, v);
+    cout << '(' << int(unpack[0]);
+    for (unsigned i = 1; i < L; ++i) {
+        cout << ',' << int(unpack[i]);
+    }
+    cout << ')';
+}
+*/
+
+
+#define SSE_L2SQR_BYTE(addr1, addr2, sum, z) \
+    do { \
+        const __m128i o = _mm_load_si128((__m128i const *)(addr1));\
+        const __m128i p = _mm_load_si128((__m128i const *)(addr2));\
+        __m128i o1 = _mm_unpackhi_epi8(o,z); \
+        __m128i p1 = _mm_unpackhi_epi8(p,z); \
+        __m128i d = _mm_sub_epi16(o1, p1); \
+        sum = _mm_add_epi32(sum, _mm_madd_epi16(d, d)); \
+        o1 = _mm_unpacklo_epi8(o,z); \
+        p1 = _mm_unpacklo_epi8(p,z); \
+        d = _mm_sub_epi16(o1, p1); \
+        sum = _mm_add_epi32(sum, _mm_madd_epi16(d, d)); \
+    } while (false)
+namespace kgraph { namespace metric {
+    template <>
+    float l2sqr::apply<uint8_t> (uint8_t const *t1, uint8_t const *t2, unsigned dim) {
+        unsigned D = (dim + 0xFU) & ~0xFU;   // actual dimension used in calculation, 0-padded
+        unsigned DR = D % 64;           // process 32 dims per iteration
+        unsigned DD = D - DR;
+        const uint8_t *l = t1;
+        const uint8_t *r = t2;
+        const uint8_t *e_l = l + DD;
+        const uint8_t *e_r = r + DD;
+        int32_t unpack[4] __attribute__ ((aligned (16))) = {0, 0, 0, 0};
+        __m128i sum = _mm_load_si128((__m128i *)unpack);
+        const __m128i z = sum;
+        switch (DR) {
+            case 48:
+                SSE_L2SQR_BYTE(e_l+32, e_r+32, sum, z);
+            case 32:
+                SSE_L2SQR_BYTE(e_l+16, e_r+16, sum, z);
+            case 16:
+                SSE_L2SQR_BYTE(e_l, e_r, sum, z);
+        }
+        for (unsigned i = 0; i < DD; i += 64, l += 64, r += 64) {
+            SSE_L2SQR_BYTE(l, r, sum, z);
+            SSE_L2SQR_BYTE(l + 16, r + 16, sum, z);
+            SSE_L2SQR_BYTE(l + 32, r + 32, sum, z);
+            SSE_L2SQR_BYTE(l + 48, r + 48, sum, z);
+        }
+        _mm_store_si128((__m128i *)unpack, sum);
+        int32_t ret = unpack[0] + unpack[1] + unpack[2] + unpack[3];
+        return float(ret);//sqrt(ret);
     }
 }}
 
