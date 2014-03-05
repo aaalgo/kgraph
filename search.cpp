@@ -4,7 +4,13 @@
     DISTRIBUTION OF THIS PROGRAM IN EITHER BINARY OR SOURCE CODE FORM MUST BE
     PERMITTED BY THE AUTHOR.
 */
+#ifndef KGRAPH_VALUE_TYPE
+#define KGRAPH_VALUE_TYPE float
+#endif
 
+
+#include <cctype>
+#include <type_traits>
 #include <iostream>
 #include <boost/timer/timer.hpp>
 #include <boost/program_options.hpp>
@@ -16,6 +22,8 @@ using namespace std;
 using namespace boost;
 using namespace kgraph;
 namespace po = boost::program_options; 
+
+typedef KGRAPH_VALUE_TYPE value_type;
 
 int main (int argc, char *argv[]) {
     vector<string> params;
@@ -64,8 +72,8 @@ int main (int argc, char *argv[]) {
         U = K;
     }
 
-    FloatDataMatrix data;
-    FloatDataMatrix query;
+    Matrix<value_type> data;
+    Matrix<value_type> query;
     IndexMatrix result; //(query.size(), U);
 
     data.load_lshkit(input_path);
@@ -75,7 +83,7 @@ int main (int argc, char *argv[]) {
         BOOST_VERIFY(result.size() == query.size());
         BOOST_VERIFY(result.dim() == U);
     }
-    MatrixOracle<float, metric::l2sqr> oracle(data);
+    MatrixOracle<value_type, metric::l2sqr> oracle(data);
     if (vm.count("linear")) {
         boost::timer::auto_cpu_timer timer;
         result.resize(query.size(), K);

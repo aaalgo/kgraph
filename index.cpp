@@ -1,13 +1,16 @@
 /* 
-    Copyright (C) 2010,2011 Wei Dong <wdong.pku@gmail.com>. All Rights Reserved.
-
-    DISTRIBUTION OF THIS PROGRAM IN EITHER BINARY OR SOURCE CODE FORM MUST BE
-    PERMITTED BY THE AUTHOR.
+    Copyright (C) 2013,2014 Wei Dong <wdong@wdong.org>. All Rights Reserved.
 */
 
+#ifndef KGRAPH_VALUE_TYPE
+#define KGRAPH_VALUE_TYPE float
+#endif
+
 #include <sys/time.h>
+#include <cctype>
 #include <random>
 #include <iomanip>
+#include <type_traits>
 #include <boost/tr1/random.hpp>
 #include <boost/format.hpp>
 #include <boost/program_options.hpp>
@@ -19,6 +22,8 @@ using namespace boost;
 using namespace kgraph;
 
 namespace po = boost::program_options; 
+
+typedef KGRAPH_VALUE_TYPE value_type;
 
 int main (int argc, char *argv[]) {
     string data_path;
@@ -100,22 +105,25 @@ int main (int argc, char *argv[]) {
         unsigned header[LSHKIT_HEADER]; /* entry size, row, col */
         is.read((char *)header, sizeof header);
         BOOST_VERIFY(is);
-        BOOST_VERIFY(header[0] == sizeof(float));
+        BOOST_VERIFY(header[0] == sizeof(value_type));
         is.close();
         D = header[2];
         skip = LSHKIT_HEADER * sizeof(unsigned);
         gap = 0;
     }
 
-    Matrix<float> data;
+    Matrix<value_type> data;
     if (synthetic) {
+        if (!std::is_floating_point<value_type>::value) {
+            throw runtime_error("synthetic data not implemented for non-floating-point values.");
+        }
         data.resize(synthetic, D);
         cerr << "Generating synthetic data..." << endl;
         default_random_engine rng(params.seed);
-        uniform_real_distribution<float> distribution(-1.0, 1.0);
+        uniform_real_distribution<double> distribution(-1.0, 1.0);
         data.zero(); // important to do that
         for (unsigned i = 0; i < synthetic; ++i) {
-            float *row = data[i];
+            value_type *row = data[i];
             for (unsigned j = 0; j < D; ++j) {
                 row[j] = distribution(rng);
             }
@@ -125,20 +133,23 @@ int main (int argc, char *argv[]) {
         data.load(data_path, D, skip, gap);
     }
     if (noise != 0) {
+        if (!std::is_floating_point<value_type>::value) {
+            throw runtime_error("noise injection not implemented for non-floating-point value.");
+        }
         tr1::ranlux64_base_01 rng;
-        float sum = 0, sum2 = 0;
+        double sum = 0, sum2 = 0;
         for (unsigned i = 0; i < data.size(); ++i) {
             for (unsigned j = 0; j < data.dim(); ++j) {
-                float v = data[i][j];
+                value_type v = data[i][j];
                 sum += v;
                 sum2 += v * v;
             }
         }
-        float total = float(data.size()) * data.dim();
-        float avg2 = sum2 / total, avg = sum / total;
-        float dev = sqrt(avg2 - avg * avg);
+        double total = double(data.size()) * data.dim();
+        double avg2 = sum2 / total, avg = sum / total;
+        double dev = sqrt(avg2 - avg * avg);
         cerr << "Adding Gaussian noise w/ " << noise << "x sigma(" << dev << ")..." << endl;
-        boost::normal_distribution<float> gaussian(0, noise * dev);
+        boost::normal_distribution<double> gaussian(0, noise * dev);
         for (unsigned i = 0; i < data.size(); ++i) {
             for (unsigned j = 0; j < data.dim(); ++j) {
                 data[i][j] += gaussian(rng);
@@ -146,7 +157,7 @@ int main (int argc, char *argv[]) {
         }
     }
 
-    MatrixOracle<float, metric::l2sqr> oracle(data);
+    MatrixOracle<value_type, metric::l2sqr> oracle(data);
     KGraph::IndexInfo info;
     KGraph kgraph(oracle, params, &info);
     if (output_path.size()) {

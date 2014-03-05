@@ -15,7 +15,7 @@ LDLIBS += -lboost_timer -lboost_chrono -lboost_system -lboost_program_options -l
 
 COMMON = kgraph.o
 HEADERS = kgraph.h kgraph-matrix.h kgraph-util.h
-PROGS = index search prune stat index-b
+PROGS = index search prune stat 
 
 all:	$(PROGS)
 
