@@ -1,4 +1,4 @@
 kgraph
 ======
 
-http://www.wdong.org/kgraph/
+http://www.kgraph.org/
