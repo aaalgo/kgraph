@@ -139,9 +139,16 @@ namespace kgraph {
         unsigned i = K;
         while (i > 0) {
             j = i - 1;
+            if (addr[j].dist <= nn.dist) break;
+            i = j;
+        }
+        // check for equal ID
+        unsigned l = i;
+        while (l > 0) {
+            j = l - 1;
             if (addr[j].dist < nn.dist) break;
             if (addr[j].id == nn.id) return K + 1;
-            i = j;
+            l = j;
         }
         // i <= K-1
         j = K;
