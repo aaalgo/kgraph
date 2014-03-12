@@ -5,9 +5,6 @@
 #include <fstream>
 #include <algorithm>
 #include <random>
-#define timer timer_for_boost_progress_t
-#include <boost/progress.hpp>
-#undef timer
 #include <boost/timer/timer.hpp>
 #include <boost/dynamic_bitset.hpp>
 #include <boost/accumulators/accumulators.hpp>
@@ -202,7 +199,8 @@ namespace kgraph {
         pnns->swap(nns);
     }
 
-    void SearchOracle::search (unsigned K, unsigned *ids) const {
+    unsigned SearchOracle::search (unsigned K, float epsilon, unsigned *ids) const {
+        /*
         vector<Neighbor> nns(K+1);
         unsigned N = size();
         BOOST_VERIFY(N >= K);
@@ -214,6 +212,8 @@ namespace kgraph {
                 ids[k] = nns[k].id;
             }
         }
+        */
+        return 0;
     }
 
     void GenerateControl (IndexOracle const &oracle, unsigned C, unsigned K, vector<Control> *pcontrols) {
@@ -234,7 +234,132 @@ namespace kgraph {
         pcontrols->swap(controls);
     }
 
-    class KGraphConstructor: public KGraph {
+    static char const *KGRAPH_MAGIC = "KNNGRAPH";
+    static unsigned constexpr KGRAPH_MAGIC_SIZE = 8;
+    static uint32_t constexpr VERSION_MAJOR = 1;
+    static uint32_t constexpr VERSION_MINOR = 0;
+
+    class KGraphImpl: public KGraph {
+    protected:
+        vector<vector<unsigned>> graph;
+    public:
+        virtual ~KGraphImpl () {
+        }
+        virtual void load (char const *path) {
+            BOOST_VERIFY(sizeof(unsigned) == sizeof(uint32_t));
+            ifstream is(path, ios::binary);
+            char magic[KGRAPH_MAGIC_SIZE];
+            uint32_t major;
+            uint32_t minor;
+            uint32_t N;
+            is.read(magic, sizeof(magic));
+            is.read(reinterpret_cast<char *>(&major), sizeof(major));
+            is.read(reinterpret_cast<char *>(&minor), sizeof(minor));
+            is.read(reinterpret_cast<char *>(&N), sizeof(N));
+            BOOST_VERIFY(is);
+            for (unsigned i = 0; i < KGRAPH_MAGIC_SIZE; ++i) {
+                BOOST_VERIFY(KGRAPH_MAGIC[i] == magic[i]);
+            }
+            BOOST_VERIFY(major == VERSION_MAJOR && minor == VERSION_MINOR);
+            graph.resize(N);
+            for (auto &knn: graph) {
+                unsigned K;
+                is.read(reinterpret_cast<char *>(&K), sizeof(K));
+                BOOST_VERIFY(is);
+                knn.resize(K);
+                is.read(reinterpret_cast<char *>(&knn[0]), K * sizeof(knn[0]));
+            }
+        }
+
+        virtual void save (char const *path) {
+            uint32_t N = graph.size();
+            ofstream os(path, ios::binary);
+            os.write(KGRAPH_MAGIC, KGRAPH_MAGIC_SIZE);
+            os.write(reinterpret_cast<char const *>(&VERSION_MAJOR), sizeof(VERSION_MAJOR));
+            os.write(reinterpret_cast<char const *>(&VERSION_MINOR), sizeof(VERSION_MINOR));
+            os.write(reinterpret_cast<char const *>(&N), sizeof(N));
+            for (auto const &knn: graph) {
+                uint32_t K = knn.size();
+                os.write(reinterpret_cast<char const *>(&K), sizeof(K));
+                os.write(reinterpret_cast<char const *>(&knn[0]), K * sizeof(knn[0]));
+            }
+        }
+
+        virtual void build (IndexOracle const &oracle, IndexParams const &param, IndexInfo *info);
+
+        virtual void search (SearchOracle const &oracle, SearchParams const &params, unsigned *ids, SearchInfo *pinfo) {
+            /*
+            BOOST_VERIFY(graph.size() <= oracle.size());
+            boost::timer::cpu_timer timer;
+            vector<Neighbor> knn(params.K);
+            boost::dynamic_bitset<> flags(graph.size(), false);
+
+            if (params.init) {
+                for (unsigned k = 0; k < params.K; ++k) {
+                    knn[k].id = ids[k];
+                }
+            }
+            else {
+                unsigned seed = params.seed;
+                if (seed == 0) seed = time(NULL);
+                mt19937 rng(seed);
+                vector<unsigned> random(params.K);
+                GenRandom(rng, &random[0], params.K, graph.size());
+                for (unsigned k = 0; k < params.K; ++k) {
+                    knn[k].id = random[k];
+                }
+            }
+            for (unsigned k = 0; k < params.K; ++k) {
+                flags[knn[k].id] = false;
+                knn[k].flag = true;
+                knn[k].dist = oracle(knn[k].id);
+            }
+            sort(knn.begin(), knn.end());
+
+            unsigned updates = 0;
+            unsigned n_comps = 0;
+            unsigned k =  0;
+            while (k < params.K) {
+                unsigned nk = params.K;
+                if (knn[k].flag) {
+                    knn[k].flag = false;
+                    unsigned cur = knn[k].id;
+                    for (unsigned id: graph[cur]) {
+                        if (flags[id]) continue;
+                        flags[id] = true;
+                        ++n_comps;
+                        Neighbor nn(id, oracle(id));
+                        if (nn.dist < knn.back().dist) {
+                            unsigned r = UpdateKnnList(&knn[0], params.K, nn);
+                            if (r < nk) {
+                                nk = r;
+                                ++updates;
+                            }
+                        }
+                    }
+                }
+                if (nk <= k) {
+                    k = nk;
+                }
+                else {
+                    ++k;
+                }
+            }
+            if (ids) {
+                for (unsigned k = 0; k < params.K; ++k) {
+                    ids[k] = knn[k].id;
+                }
+            }
+            if (pinfo) {
+                pinfo->updates = updates;
+                pinfo->cost = float(n_comps) / graph.size();
+                pinfo->times = timer.elapsed();
+            }
+            */
+        }
+    };
+
+    class KGraphConstructor: public KGraphImpl {
         // The neighborhood structure maintains a pool of near neighbors of an object.
         // The neighbors are stored in the pool.  "n" (<="params.L") is the number of valid entries
         // in the pool, with the beginning "k" (<="n") entries sorted.
@@ -289,355 +414,234 @@ namespace kgraph {
         vector<Nhood> nhoods;
         size_t n_comps;
 
-        void init ();
-        void join ();
-        void update ();
-public:
-        KGraphConstructor (IndexOracle const &o, IndexParams const &p, IndexInfo *r);
-    };
-
-    void KGraphConstructor::init () {
-        unsigned N = oracle.size();
-        unsigned seed = params.seed;
-        mt19937 rng(seed);
-        for (auto &nhood: nhoods) {
-            nhood.nn_new.resize(params.S * 2);
-            nhood.pool.resize(params.L+1);
-            nhood.radius = numeric_limits<float>::max();
-        }
-#pragma omp parallel
-        {
-#ifdef _OPENMP
-            mt19937 rng(seed ^ omp_get_thread_num());
-#else
+        void init () {
+            unsigned N = oracle.size();
+            unsigned seed = params.seed;
             mt19937 rng(seed);
+            for (auto &nhood: nhoods) {
+                nhood.nn_new.resize(params.S * 2);
+                nhood.pool.resize(params.L+1);
+                nhood.radius = numeric_limits<float>::max();
+            }
+#pragma omp parallel
+            {
+#ifdef _OPENMP
+                mt19937 rng(seed ^ omp_get_thread_num());
+#else
+                mt19937 rng(seed);
 #endif
-            vector<unsigned> random(params.S + 1);
+                vector<unsigned> random(params.S + 1);
 #pragma omp for
+                for (unsigned n = 0; n < N; ++n) {
+                    auto &nhood = nhoods[n];
+                    Neighbors &pool = nhood.pool;
+                    GenRandom(rng, &nhood.nn_new[0], nhood.nn_new.size(), N);
+                    GenRandom(rng, &random[0], random.size(), N);
+                    nhood.L = params.S;
+                    nhood.M = params.S;
+                    unsigned i = 0;
+                    for (unsigned l = 0; l < nhood.L; ++l) {
+                        if (random[i] == n) ++i;
+                        auto &nn = nhood.pool[l];
+                        nn.id = random[i++];
+                        nn.dist = oracle(nn.id, n);
+                        nn.flag = true;
+                    }
+                    sort(pool.begin(), pool.begin() + nhood.L);
+                }
+            }
+        }
+        void join () {
+            size_t cc = 0;
+#pragma omp parallel for default(shared) schedule(dynamic, 100) reduction(+:cc)
+            for (unsigned n = 0; n < oracle.size(); ++n) {
+                size_t uu = 0;
+                nhoods[n].found = false;
+                nhoods[n].join([&](unsigned i, unsigned j) {
+                        float dist = oracle(i, j);
+                        ++cc;
+                        unsigned r;
+                        r = nhoods[i].parallel_try_insert(j, dist);
+                        if (r < params.K) ++uu;
+                        nhoods[j].parallel_try_insert(i, dist);
+                        if (r < params.K) ++uu;
+                });
+                nhoods[n].found = uu > 0;
+            }
+            n_comps += cc;
+        }
+        void update () {
+            unsigned N = oracle.size();
+            for (auto &nhood: nhoods) {
+                nhood.nn_new.clear();
+                nhood.nn_old.clear();
+                nhood.rnn_new.clear();
+                nhood.rnn_old.clear();
+                nhood.radius = nhood.pool.back().dist;
+            }
+            //!!! compute radius2
+#pragma omp parallel for
             for (unsigned n = 0; n < N; ++n) {
                 auto &nhood = nhoods[n];
-                Neighbors &pool = nhood.pool;
-                GenRandom(rng, &nhood.nn_new[0], nhood.nn_new.size(), N);
-                GenRandom(rng, &random[0], random.size(), N);
-                nhood.L = params.S;
-                nhood.M = params.S;
-                unsigned i = 0;
-                for (unsigned l = 0; l < nhood.L; ++l) {
-                    if (random[i] == n) ++i;
-                    auto &nn = nhood.pool[l];
-                    nn.id = random[i++];
-                    nn.dist = oracle(nn.id, n);
-                    nn.flag = true;
+                if (nhood.found) {
+                    unsigned maxl = std::min(nhood.M + params.S, nhood.L);
+                    unsigned c = 0;
+                    unsigned l = 0;
+                    while ((l < maxl) && (c < params.S)) {
+                        if (nhood.pool[l].flag) ++c;
+                        ++l;
+                    }
+                    nhood.M = l;
                 }
-                sort(pool.begin(), pool.begin() + nhood.L);
+                BOOST_VERIFY(nhood.M > 0);
+                nhood.radiusM = nhood.pool[nhood.M-1].dist;
             }
-        }
-    }
-
-    void KGraphConstructor::join () {
-        size_t cc = 0;
-#pragma omp parallel for default(shared) schedule(dynamic, 100) reduction(+:cc)
-        for (unsigned n = 0; n < oracle.size(); ++n) {
-            size_t uu = 0;
-            nhoods[n].found = false;
-            nhoods[n].join([&](unsigned i, unsigned j) {
-                    float dist = oracle(i, j);
-                    ++cc;
-                    unsigned r;
-                    r = nhoods[i].parallel_try_insert(j, dist);
-                    if (r < params.K) ++uu;
-                    nhoods[j].parallel_try_insert(i, dist);
-                    if (r < params.K) ++uu;
-            });
-            nhoods[n].found = uu > 0;
-        }
-        n_comps += cc;
-    }
-
-    void KGraphConstructor::update () {
-        unsigned N = oracle.size();
-        for (auto &nhood: nhoods) {
-            nhood.nn_new.clear();
-            nhood.nn_old.clear();
-            nhood.rnn_new.clear();
-            nhood.rnn_old.clear();
-            nhood.radius = nhood.pool.back().dist;
-        }
-        //!!! compute radius2
 #pragma omp parallel for
-        for (unsigned n = 0; n < N; ++n) {
-            auto &nhood = nhoods[n];
-            if (nhood.found) {
-                unsigned maxl = std::min(nhood.M + params.S, nhood.L);
-                unsigned c = 0;
+            for (unsigned n = 0; n < N; ++n) {
+                auto &nhood = nhoods[n];
+                auto &nn_new = nhood.nn_new;
+                auto &nn_old = nhood.nn_old;
                 unsigned l = 0;
-                while ((l < maxl) && (c < params.S)) {
-                    if (nhood.pool[l].flag) ++c;
-                    ++l;
-                }
-                nhood.M = l;
-            }
-            BOOST_VERIFY(nhood.M > 0);
-            nhood.radiusM = nhood.pool[nhood.M-1].dist;
-        }
-#pragma omp parallel for
-        for (unsigned n = 0; n < N; ++n) {
-            auto &nhood = nhoods[n];
-            auto &nn_new = nhood.nn_new;
-            auto &nn_old = nhood.nn_old;
-            unsigned l = 0;
-            for (unsigned l = 0; l < nhood.M; ++l) {
-                auto &nn = nhood.pool[l];
-                auto &nhood_o = nhoods[nn.id];  // nhood on the other side of the edge
-                if (nn.flag) {
-                    nn_new.push_back(nn.id);
-                    if (nn.dist > nhood_o.radiusM) {
-                        LockGuard guard(nhood_o.lock);
-                        nhood_o.rnn_new.push_back(n);
+                for (unsigned l = 0; l < nhood.M; ++l) {
+                    auto &nn = nhood.pool[l];
+                    auto &nhood_o = nhoods[nn.id];  // nhood on the other side of the edge
+                    if (nn.flag) {
+                        nn_new.push_back(nn.id);
+                        if (nn.dist > nhood_o.radiusM) {
+                            LockGuard guard(nhood_o.lock);
+                            nhood_o.rnn_new.push_back(n);
+                        }
+                        nn.flag = false;
                     }
-                    nn.flag = false;
-                }
-                else {
-                    nn_old.push_back(nn.id);
-                    if (nn.dist > nhood_o.radiusM) {
-                        LockGuard guard(nhood_o.lock);
-                        nhood_o.rnn_old.push_back(n);
-                    }
-                }
-            }
-        }
-        for (unsigned i = 0; i < N; ++i) {
-            auto &nn_new = nhoods[i].nn_new;
-            auto &nn_old = nhoods[i].nn_old;
-            auto &rnn_new = nhoods[i].rnn_new;
-            auto &rnn_old = nhoods[i].rnn_old;
-            if (params.R && (rnn_new.size() > params.R)) {
-                random_shuffle(rnn_new.begin(), rnn_new.end());
-                rnn_new.resize(params.R);
-            }
-            nn_new.insert(nn_new.end(), rnn_new.begin(), rnn_new.end());
-            if (params.R && (rnn_old.size() > params.R)) {
-                random_shuffle(rnn_old.begin(), rnn_old.end());
-                rnn_old.resize(params.R);
-            }
-            nn_old.insert(nn_old.end(), rnn_old.begin(), rnn_old.end());
-        }
-    }
-
-    KGraphConstructor::KGraphConstructor (IndexOracle const &o, IndexParams const &p, IndexInfo *r)
-            : oracle(o), params(p), pinfo(r), nhoods(o.size()), n_comps(0)
-    {
-        boost::timer::cpu_timer timer;
-        params.check();
-        unsigned N = oracle.size();
-        BOOST_VERIFY(N > params.K); // has to be > because an object cannot be it's own neighbor.
-
-        vector<Control> controls;
-        cerr << "Generating control..." << endl;
-        GenerateControl(oracle, params.controls, params.K, &controls);
-
-        cerr << "Contructing graph..." << endl;
-        cerr << "Initializing..." << endl;
-        // initialize nhoods
-        init();
-
-        // iterate until converge
-        float total = N * float(N - 1) / 2;
-        IndexInfo info;
-        info.stop_condition = IndexInfo::ITERATION;
-        info.recall = 0;
-        info.accuracy = numeric_limits<float>::max();
-        info.cost = 0;
-        info.iterations = 0;
-        info.delta = 1.0;
-
-        float update_time = 0;
-
-        for (unsigned it = 0; (params.iterations <= 0) || (it < params.iterations); ++it) {
-            ++info.iterations;
-            join();
-            {
-                info.cost = n_comps / total;
-                accumulator_set<float, stats<tag::mean>> one_exact;
-                accumulator_set<float, stats<tag::mean>> one_approx;
-                accumulator_set<float, stats<tag::mean>> one_recall;
-                accumulator_set<float, stats<tag::mean>> recall;
-                accumulator_set<float, stats<tag::mean>> accuracy;
-                accumulator_set<float, stats<tag::mean>> M;
-                accumulator_set<float, stats<tag::mean>> delta;
-                for (auto const &nhood: nhoods) {
-                    M(nhood.M);
-                    delta(EvaluateDelta(nhood.pool, params.K));
-                }
-                for (auto const &c: controls) {
-                    one_approx(nhoods[c.id].pool[0].dist);
-                    one_exact(c.neighbors[0].dist);
-                    one_recall(EvaluateOneRate(nhoods[c.id].pool, c.neighbors));
-                    recall(EvaluateRecall(nhoods[c.id].pool, c.neighbors));
-                    accuracy(EvaluateAccuracy(nhoods[c.id].pool, c.neighbors));
-                }
-                info.delta = mean(delta);
-                info.recall = mean(recall);
-                info.accuracy = mean(accuracy);
-                info.times = timer.elapsed();
-                cout << "iteration: " << info.iterations
-                     << " recall: " << info.recall
-                     << " accuracy: " << info.accuracy
-                     << " cost: " << info.cost
-                     << " M: " << mean(M)
-                     << " delta: " << info.delta
-                     << " time: " << info.times.wall / 1e9
-                     << " one-recall: " << mean(one_recall)
-                     << " one-ratio: " << mean(one_approx) / mean(one_exact)
-                     << endl;
-            }
-            if (info.delta <= params.delta) {
-                info.stop_condition = IndexInfo::DELTA;
-                break;
-            }
-            if (info.recall >= params.recall) {
-                info.stop_condition = IndexInfo::RECALL;
-                break;
-            }
-            boost::timer::cpu_timer timer2;
-            update();
-            update_time += timer2.elapsed().wall / 1e9;
-        }
-        graph.resize(N);
-        for (unsigned n = 0; n < N; ++n) {
-            auto &knn = graph[n];
-            auto const &pool = nhoods[n].pool;
-            knn.resize(params.K);
-            for (unsigned k = 0; k < params.K; ++k) {
-                knn[k] = pool[k].id;
-            }
-        }
-        info.times = timer.elapsed();
-        if (pinfo) {
-            *pinfo = info;
-        }
-        cerr << "UPDATE: " << update_time << endl;
-    }
-
-    void KGraph::build (IndexOracle const &oracle, IndexParams const &param, IndexInfo *info) {
-        KGraphConstructor con(oracle, param, info);
-        graph.swap(con.graph);
-    }
-
-    static char const *KGRAPH_MAGIC = "KNNGRAPH";
-    static unsigned const KGRAPH_MAGIC_SIZE = 8;
-    static uint32_t const VERSION_MAJOR = 1;
-    static uint32_t const VERSION_MINOR = 0;
-
-    void KGraph::load (string const &path) {
-        BOOST_VERIFY(sizeof(unsigned) == sizeof(uint32_t));
-        ifstream is(path.c_str(), ios::binary);
-        char magic[KGRAPH_MAGIC_SIZE];
-        uint32_t major;
-        uint32_t minor;
-        uint32_t N;
-        is.read(magic, sizeof(magic));
-        is.read(reinterpret_cast<char *>(&major), sizeof(major));
-        is.read(reinterpret_cast<char *>(&minor), sizeof(minor));
-        is.read(reinterpret_cast<char *>(&N), sizeof(N));
-        BOOST_VERIFY(is);
-        for (unsigned i = 0; i < KGRAPH_MAGIC_SIZE; ++i) {
-            BOOST_VERIFY(KGRAPH_MAGIC[i] == magic[i]);
-        }
-        BOOST_VERIFY(major == VERSION_MAJOR && minor == VERSION_MINOR);
-        graph.resize(N);
-        for (auto &knn: graph) {
-            unsigned K;
-            is.read(reinterpret_cast<char *>(&K), sizeof(K));
-            BOOST_VERIFY(is);
-            knn.resize(K);
-            is.read(reinterpret_cast<char *>(&knn[0]), K * sizeof(knn[0]));
-        }
-    }
-
-    void KGraph::save (string const &path) {
-        uint32_t N = graph.size();
-        ofstream os(path.c_str(), ios::binary);
-        os.write(KGRAPH_MAGIC, KGRAPH_MAGIC_SIZE);
-        os.write(reinterpret_cast<char const *>(&VERSION_MAJOR), sizeof(VERSION_MAJOR));
-        os.write(reinterpret_cast<char const *>(&VERSION_MINOR), sizeof(VERSION_MINOR));
-        os.write(reinterpret_cast<char const *>(&N), sizeof(N));
-        for (auto const &knn: graph) {
-            uint32_t K = knn.size();
-            os.write(reinterpret_cast<char const *>(&K), sizeof(K));
-            os.write(reinterpret_cast<char const *>(&knn[0]), K * sizeof(knn[0]));
-        }
-    }
-
-    void KGraph::search (SearchOracle const &oracle, SearchParams const &params, unsigned *ids, SearchInfo *pinfo) {
-        /*
-        BOOST_VERIFY(graph.size() <= oracle.size());
-        boost::timer::cpu_timer timer;
-        vector<Neighbor> knn(params.K);
-        boost::dynamic_bitset<> flags(graph.size(), false);
-
-        if (params.init) {
-            for (unsigned k = 0; k < params.K; ++k) {
-                knn[k].id = ids[k];
-            }
-        }
-        else {
-            unsigned seed = params.seed;
-            if (seed == 0) seed = time(NULL);
-            mt19937 rng(seed);
-            vector<unsigned> random(params.K);
-            GenRandom(rng, &random[0], params.K, graph.size());
-            for (unsigned k = 0; k < params.K; ++k) {
-                knn[k].id = random[k];
-            }
-        }
-        for (unsigned k = 0; k < params.K; ++k) {
-            flags[knn[k].id] = false;
-            knn[k].flag = true;
-            knn[k].dist = oracle(knn[k].id);
-        }
-        sort(knn.begin(), knn.end());
-
-        unsigned updates = 0;
-        unsigned n_comps = 0;
-        unsigned k =  0;
-        while (k < params.K) {
-            unsigned nk = params.K;
-            if (knn[k].flag) {
-                knn[k].flag = false;
-                unsigned cur = knn[k].id;
-                for (unsigned id: graph[cur]) {
-                    if (flags[id]) continue;
-                    flags[id] = true;
-                    ++n_comps;
-                    Neighbor nn(id, oracle(id));
-                    if (nn.dist < knn.back().dist) {
-                        unsigned r = UpdateKnnList(&knn[0], params.K, nn);
-                        if (r < nk) {
-                            nk = r;
-                            ++updates;
+                    else {
+                        nn_old.push_back(nn.id);
+                        if (nn.dist > nhood_o.radiusM) {
+                            LockGuard guard(nhood_o.lock);
+                            nhood_o.rnn_old.push_back(n);
                         }
                     }
                 }
             }
-            if (nk <= k) {
-                k = nk;
-            }
-            else {
-                ++k;
+            for (unsigned i = 0; i < N; ++i) {
+                auto &nn_new = nhoods[i].nn_new;
+                auto &nn_old = nhoods[i].nn_old;
+                auto &rnn_new = nhoods[i].rnn_new;
+                auto &rnn_old = nhoods[i].rnn_old;
+                if (params.R && (rnn_new.size() > params.R)) {
+                    random_shuffle(rnn_new.begin(), rnn_new.end());
+                    rnn_new.resize(params.R);
+                }
+                nn_new.insert(nn_new.end(), rnn_new.begin(), rnn_new.end());
+                if (params.R && (rnn_old.size() > params.R)) {
+                    random_shuffle(rnn_old.begin(), rnn_old.end());
+                    rnn_old.resize(params.R);
+                }
+                nn_old.insert(nn_old.end(), rnn_old.begin(), rnn_old.end());
             }
         }
-        if (ids) {
-            for (unsigned k = 0; k < params.K; ++k) {
-                ids[k] = knn[k].id;
+public:
+        KGraphConstructor (IndexOracle const &o, IndexParams const &p, IndexInfo *r)
+            : oracle(o), params(p), pinfo(r), nhoods(o.size()), n_comps(0)
+        {
+            boost::timer::cpu_timer timer;
+            //params.check();
+            unsigned N = oracle.size();
+            BOOST_VERIFY(N > params.K); // has to be > because an object cannot be it's own neighbor.
+
+            vector<Control> controls;
+            cerr << "Generating control..." << endl;
+            GenerateControl(oracle, params.controls, params.K, &controls);
+
+            cerr << "Contructing graph..." << endl;
+            cerr << "Initializing..." << endl;
+            // initialize nhoods
+            init();
+
+            // iterate until converge
+            float total = N * float(N - 1) / 2;
+            IndexInfo info;
+            info.stop_condition = IndexInfo::ITERATION;
+            info.recall = 0;
+            info.accuracy = numeric_limits<float>::max();
+            info.cost = 0;
+            info.iterations = 0;
+            info.delta = 1.0;
+
+            float update_time = 0;
+
+            for (unsigned it = 0; (params.iterations <= 0) || (it < params.iterations); ++it) {
+                ++info.iterations;
+                join();
+                {
+                    info.cost = n_comps / total;
+                    accumulator_set<float, stats<tag::mean>> one_exact;
+                    accumulator_set<float, stats<tag::mean>> one_approx;
+                    accumulator_set<float, stats<tag::mean>> one_recall;
+                    accumulator_set<float, stats<tag::mean>> recall;
+                    accumulator_set<float, stats<tag::mean>> accuracy;
+                    accumulator_set<float, stats<tag::mean>> M;
+                    accumulator_set<float, stats<tag::mean>> delta;
+                    for (auto const &nhood: nhoods) {
+                        M(nhood.M);
+                        delta(EvaluateDelta(nhood.pool, params.K));
+                    }
+                    for (auto const &c: controls) {
+                        one_approx(nhoods[c.id].pool[0].dist);
+                        one_exact(c.neighbors[0].dist);
+                        one_recall(EvaluateOneRate(nhoods[c.id].pool, c.neighbors));
+                        recall(EvaluateRecall(nhoods[c.id].pool, c.neighbors));
+                        accuracy(EvaluateAccuracy(nhoods[c.id].pool, c.neighbors));
+                    }
+                    info.delta = mean(delta);
+                    info.recall = mean(recall);
+                    info.accuracy = mean(accuracy);
+                    auto times = timer.elapsed();
+                    cout << "iteration: " << info.iterations
+                         << " recall: " << info.recall
+                         << " accuracy: " << info.accuracy
+                         << " cost: " << info.cost
+                         << " M: " << mean(M)
+                         << " delta: " << info.delta
+                         << " time: " << times.wall / 1e9
+                         << " one-recall: " << mean(one_recall)
+                         << " one-ratio: " << mean(one_approx) / mean(one_exact)
+                         << endl;
+                }
+                if (info.delta <= params.delta) {
+                    info.stop_condition = IndexInfo::DELTA;
+                    break;
+                }
+                if (info.recall >= params.recall) {
+                    info.stop_condition = IndexInfo::RECALL;
+                    break;
+                }
+                boost::timer::cpu_timer timer2;
+                update();
+                update_time += timer2.elapsed().wall / 1e9;
             }
+            graph.resize(N);
+            for (unsigned n = 0; n < N; ++n) {
+                auto &knn = graph[n];
+                auto const &pool = nhoods[n].pool;
+                knn.resize(params.K);
+                for (unsigned k = 0; k < params.K; ++k) {
+                    knn[k] = pool[k].id;
+                }
+            }
+            if (pinfo) {
+                *pinfo = info;
+            }
+            cerr << "UPDATE: " << update_time << endl;
         }
-        if (pinfo) {
-            pinfo->updates = updates;
-            pinfo->cost = float(n_comps) / graph.size();
-            pinfo->times = timer.elapsed();
-        }
-        */
+    };
+
+    void KGraphImpl::build (IndexOracle const &oracle, IndexParams const &param, IndexInfo *info) {
+        KGraphConstructor con(oracle, param, info);
+        graph.swap(con.graph);
+    }
+
+    KGraph *KGraph::make () {
+        return new KGraphImpl;
     }
 }
 

@@ -11,6 +11,7 @@
 #include <random>
 #include <iomanip>
 #include <type_traits>
+#include <boost/timer/timer.hpp>
 #include <boost/tr1/random.hpp>
 #include <boost/format.hpp>
 #include <boost/program_options.hpp>
@@ -19,6 +20,7 @@
 
 using namespace std;
 using namespace boost;
+using namespace boost::timer;
 using namespace kgraph;
 
 namespace po = boost::program_options; 
@@ -42,8 +44,8 @@ int main (int argc, char *argv[]) {
     ("help,h", "produce help message.")
     ("data", po::value(&data_path), "input path")
     ("output", po::value(&output_path), "output path")
-    (",K", po::value(&params.K)->default_value(20), "number of nearest neighbor")
-    ("controls,C", po::value(&params.controls)->default_value(100), "number of control pounsigneds")
+    (",K", po::value(&params.K)->default_value(default_K), "number of nearest neighbor")
+    ("controls,C", po::value(&params.controls)->default_value(default_controls), "number of control pounsigneds")
     ;
 
     po::options_description desc_hidden("Expert options");
@@ -163,11 +165,15 @@ int main (int argc, char *argv[]) {
 
     MatrixOracle<value_type, metric::l2sqr> oracle(data);
     KGraph::IndexInfo info;
-    KGraph kgraph(oracle, params, &info);
-    if (output_path.size()) {
-        kgraph.save(output_path);
+    KGraph *kgraph = KGraph::make(); //(oracle, params, &info);
+    {
+        auto_cpu_timer timer;
+        kgraph->build(oracle, params, &info);
     }
-    cerr << "Wall: " << (info.times.wall / 1e9) << " CPU: " << (info.times.user + info.times.system) / 1e9 << endl;
+    if (output_path.size()) {
+        kgraph->save(output_path.c_str());
+    }
+    delete kgraph;
 
     return 0;
 }

@@ -1,18 +1,20 @@
+// Copyright (C) 2013, 2014 Wei Dong <wdong@wdong.org>. All Rights Reserved.
+
 #ifndef WDONG_KGRAPH
 #define WDONG_KGRAPH
 
-#include <string>
-#include <vector>
-#include <boost/timer/timer.hpp>
-
 namespace kgraph {
+    static unsigned const default_iterations =  100;
+    static unsigned const default_L = 50;
+    static unsigned const default_K = 10;
+    static unsigned const default_S = 10;
+    static unsigned const default_R = 100;
+    static unsigned const default_controls = 100;
+    static unsigned const default_seed = 1998;
+    static unsigned const default_delta = 0.005;
+    static unsigned const default_recall = 0.98;
+    static float const default_epsilon = 1e30;
 
-    using std::string;
-    using std::vector;
-    using boost::timer::cpu_times;
-
-    // we use unsigned for size because it will be impossible for the library
-    // to index > 4 billion points in the near future.
     class IndexOracle {
     public:
         virtual unsigned size () const = 0;
@@ -23,13 +25,10 @@ namespace kgraph {
     public:
         virtual unsigned size () const = 0;
         virtual float operator () (unsigned i) const = 0;
-        // brutal force K-NN search
-        void search (unsigned K, unsigned *ids) const;
+        unsigned search (unsigned K, float epsilon, unsigned *ids) const;
     };
 
     class KGraph {
-    protected:
-        vector<vector<unsigned>> graph;
     public:
         struct IndexParams {
             unsigned iterations; // # iteration
@@ -42,14 +41,26 @@ namespace kgraph {
             float delta;
             float recall; // target recall
 
-            IndexParams (): iterations(100), L(50), K(10), S(5), R(20), controls(100), seed(1998), delta(0.005), recall(0.98) {
+            IndexParams (): iterations(default_iterations), L(default_L), K(default_K), S(default_S), R(default_R), controls(default_controls), seed(default_seed), delta(default_delta), recall(default_recall) {
             }
-
+            /*
             void check () {
                 //BOOST_VERIFY(S <= K);
                 BOOST_VERIFY(K > 0);
             }
+            */
         };
+
+        struct SearchParams {
+            unsigned K;
+            float epsilon;
+            unsigned seed;
+            bool init;
+
+            SearchParams (): K(default_K), epsilon(default_epsilon), seed(1998), init(false) {
+            }
+        };
+
 
         struct IndexInfo {
             enum StopCondition {
@@ -62,35 +73,21 @@ namespace kgraph {
             float recall;
             float accuracy;
             float delta;
-            cpu_times times;
-        };
-
-        struct SearchParams {
-            unsigned K;
-            unsigned seed;
-            bool init;
-            SearchParams (): K(20), seed(1998), init(false) {
-            }
         };
 
         struct SearchInfo {
+            unsigned N;
             float cost;
             unsigned updates;
-            cpu_times times;
         };
 
-        void load (string const &path);
-        void save (string const &path); // save to file
-        void build (IndexOracle const &oracle, IndexParams const &params, IndexInfo *info = nullptr);
-        void search (SearchOracle const &oracle, SearchParams const &params, unsigned *ids, SearchInfo *info = nullptr);
-
-        KGraph () {}
-        KGraph (IndexOracle const &oracle, IndexParams const &params, IndexInfo *info = nullptr) {
-            build(oracle, params, info);
+        virtual ~KGraph () {
         }
-        KGraph (string const &path) {
-            load(path);
-        }
+        virtual void load (char const *path) = 0;
+        virtual void save (char const *path) = 0; // save to file
+        virtual void build (IndexOracle const &oracle, IndexParams const &params, IndexInfo *info) = 0;
+        virtual void search (SearchOracle const &oracle, SearchParams const &params, unsigned *ids, SearchInfo *info) = 0;
+        static KGraph *make ();
     };
 }
 
