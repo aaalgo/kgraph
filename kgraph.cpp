@@ -10,68 +10,18 @@
 #undef timer
 #include <boost/timer/timer.hpp>
 #include <boost/dynamic_bitset.hpp>
+#include <boost/accumulators/accumulators.hpp>
+#include <boost/accumulators/statistics/stats.hpp>
+#include <boost/accumulators/statistics/mean.hpp>
+#include <boost/accumulators/statistics/moment.hpp>
 #include "boost/smart_ptr/detail/spinlock.hpp"
 #include "kgraph.h"
-
-namespace lshkit {  // code copied from lshkit
-    class Stat
-    {
-        int count;
-        float sum;
-        float sum2;
-        float min;
-        float max;
-    public:
-        Stat () : count(0), sum(0), sum2(0), min(std::numeric_limits<float>::max()), max(-std::numeric_limits<float>::max()) {
-        }
-
-        ~Stat () {
-        }
-
-        void reset () {
-            count = 0;
-            sum = sum2 = 0;
-            min = std::numeric_limits<float>::max();
-            max = -std::numeric_limits<float>::max();
-        }
-
-        void append (float r)
-        {
-            count++;
-            sum += r;
-            sum2 += r*r;
-            if (r > max) max = r;
-            if (r < min) min = r;
-        }
-
-        Stat & operator<< (float r) { append(r); return *this; }
-
-        int getCount() const { return count; }
-        float getSum() const { return sum; }
-        float getAvg() const { return sum/count; }
-        float getMax() const { return max; }
-        float getMin() const { return min; }
-        float getStd() const
-        {
-            if (count > 1) return std::sqrt((sum2 - (sum/count) * sum)/(count - 1)); 
-            else return 0; 
-        }
-
-        void merge (const Stat &stat)
-        {
-            count += stat.count;
-            sum += stat.sum;
-            sum2 += stat.sum2;
-            if (stat.min < min) min = stat.min;
-            if (stat.max > max) max = stat.max;
-        }
-    };
-}
 
 namespace kgraph {
 
     using namespace std;
     using namespace boost;
+    using namespace boost::accumulators;
 
     typedef boost::detail::spinlock Lock;
     typedef std::lock_guard<Lock> LockGuard;
@@ -475,12 +425,12 @@ public:
                 float sum_accuracy = 0;
                 float sum_approx = 0;
                 float sum_exact = 0;
-                lshkit::Stat one_rate, one_ratio;
+                accumulator_set<float, stats<tag::mean>> one_rate, one_ratio;
                 for (auto const &c: controls) {
                     sum_recall += EvaluateRecall(nhoods[c.id].pool, c.neighbors);
                     sum_accuracy += EvaluateAccuracy(nhoods[c.id].pool, c.neighbors);
-                    one_rate << EvaluateOneRate(nhoods[c.id].pool, c.neighbors);
-                    one_ratio << EvaluateOneRatio(nhoods[c.id].pool, c.neighbors);
+                    one_rate(EvaluateOneRate(nhoods[c.id].pool, c.neighbors));
+                    one_ratio(EvaluateOneRatio(nhoods[c.id].pool, c.neighbors));
                     sum_approx += nhoods[c.id].pool[0].dist;
                     sum_exact += c.neighbors[0].dist;
                 }
@@ -493,8 +443,8 @@ public:
                      << " cost: " << info.cost
                      << " delta: " << info.delta
                      << " time: " << info.times.wall / 1e9
-                     << " one-rate: " << one_rate.getAvg()
-                     << " one-ratio: " << one_ratio.getAvg()
+                     << " one-rate: " << mean(one_rate)
+                     << " one-ratio: " << mean(one_ratio)
                      << " one-ratio2: " << sum_approx / sum_exact
                      << endl;
             }
