@@ -49,7 +49,8 @@ int main (int argc, char *argv[]) {
     po::options_description desc_hidden("Expert options");
     desc_hidden.add_options()
     ("iterations,I", po::value(&params.iterations)->default_value(100), "expert")
-    (",S", po::value(&params.S)->default_value(0), "expert, if S = 0 (default) then K will be used")
+    (",S", po::value(&params.S)->default_value(5), "expert, if S = 0 (default) then K will be used")
+    (",R", po::value(&params.R)->default_value(0), "expert")
     ("delta", po::value(&params.delta)->default_value(0.005), "expert")
     ("noise", po::value(&noise)->default_value(0), "expert")
     ("recall", po::value(&params.recall)->default_value(0.98), "expert")
@@ -76,7 +77,9 @@ int main (int argc, char *argv[]) {
         lshkit = false;
     }
 
-    if (vm.count("help") || (vm.count("data") == 0 && synthetic == 0) || (vm.count("dim") == 0 && !lshkit) || (synthetic && (vm.count("dim") == 0 || vm.count("data")))) {
+    if (vm.count("help")
+            || synthetic && (vm.count("dim") == 0 || vm.count("data"))
+            || !synthetic && (vm.count("data") == 0 || (vm.count("dim") == 0 && !lshkit))) {
         cout << "Usage: index [OTHER OPTIONS]... INPUT [OUTPUT]" << endl;
         cout << "Construct k-nearest neighbor graph for Euclidean spaces using L2 distance as similarity measure..\n" << endl;
         cout << desc_visible << endl;

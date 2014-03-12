@@ -105,12 +105,13 @@ namespace kgraph {
         return pool[0].dist / knn[0].dist;
     }
 
-    static float EvaluateDelta (Neighbors const &pool) {
+    static float EvaluateDelta (Neighbors const &pool, unsigned K) {
         unsigned c = 0;
-        for (auto const &nn: pool) {
-            if (nn.flag) ++c;
+        if (pool.size() < K) K = pool.size();
+        for (unsigned i = 0; i < K; ++i) {
+            if (pool[i].flag) ++c;
         }
-        return float(c) / pool.size();
+        return float(c) / K;
     }
 
 
@@ -120,23 +121,30 @@ namespace kgraph {
     };
 
     // try insert nn into the list
-    // if nn not near enough or already appears in the list, the list is not
-    // updated, and nn is returned.  Otherwise, nn is inserted into the proper
-    // position, and the original K-th entry is returned.
-    // return the actual inserted location or K if not inserted
-    static inline unsigned UpdateKnnList (Neighbor *addr, unsigned K, Neighbor nn) {
+    // the array addr must contain at least K+1 entries:
+    //      addr[0..K-1] is a sorted list
+    //      addr[K] is as output parameter
+    // * if nn is already in addr[0..K-1], return K+1
+    // * Otherwise, do the equivalent of the following
+    //      put nn into addr[K]
+    //      make addr[0..K] sorted
+    //      return the offset of nn's index in addr (could be K)
+    //
+    // Special case:  K == 0
+    //      addr[0] <- nn
+    //      return 0
+    static inline unsigned  __attribute__ ((noinline)) UpdateKnnList (Neighbor *addr, unsigned K, Neighbor nn) {
         // find the location to insert
-        unsigned K_1 = K - 1;
-        if (nn.dist > addr[K_1].dist || nn.id == addr[K_1].id) return K;
-        unsigned i = K_1;
+        unsigned j;
+        unsigned i = K;
         while (i > 0) {
-            unsigned j = i - 1;
+            j = i - 1;
             if (addr[j].dist < nn.dist) break;
-            if (addr[j].id == nn.id) return K;
+            if (addr[j].id == nn.id) return K + 1;
             i = j;
         }
         // i <= K-1
-        unsigned j = K_1;
+        j = K;
         while (j > i) {
             addr[j] = addr[j-1];
             --j;
@@ -145,6 +153,7 @@ namespace kgraph {
         return i;
     }
 
+    /*
     static inline unsigned UpdateKnnListNoCheckId (Neighbor *addr, unsigned K, Neighbor nn) {
         // find the location to insert
         unsigned K_1 = K - 1;
@@ -164,46 +173,34 @@ namespace kgraph {
         addr[i] = nn;
         return i;
     }
+    */
 
     void LinearSearch (IndexOracle const &oracle, unsigned i, unsigned K, vector<Neighbor> *pnns) {
-        vector<Neighbor> nns(K);
+        vector<Neighbor> nns(K+1);
         unsigned N = oracle.size();
         BOOST_VERIFY(N >= K + 1);
         Neighbor nn;
         nn.id = 0;
         nn.flag = true; // we don't really use this
-        // fill with the first K
-        for (auto &e: nns) {
-            if (nn.id == i) ++nn.id;
-            nn.dist = oracle(i, nn.id);
-            e = nn;
+        unsigned k = 0;
+        while (nn.id < N) {
+            if (nn.id != i) {
+                nn.dist = oracle(i, nn.id);
+                int r = UpdateKnnList(&nns[0], k, nn);
+                if (k < K) ++k;
+            }
             ++nn.id;
         }
-        sort(nns.begin(), nns.end());
-        // do the rest of points
-        for (;;) {
-            if (nn.id == i) ++nn.id;
-            if (nn.id >= N) break;
-            nn.dist = oracle(i, nn.id);
-            UpdateKnnListNoCheckId(&nns[0], K, nn);
-            ++nn.id;
-        }
+        nns.resize(K);
         pnns->swap(nns);
     }
 
     void SearchOracle::search (unsigned K, unsigned *ids) const {
-        vector<Neighbor> nns(K);
+        vector<Neighbor> nns(K+1);
         unsigned N = size();
         BOOST_VERIFY(N >= K);
-        // fill with the first K
-        for (unsigned k = 0; k < K; ++k) {
-            nns[k].id = k;
-            nns[k].dist = operator()(k);
-            nns[k].flag = true;
-        }
-        sort(nns.begin(), nns.end());
-        for (unsigned n = K; n < N; ++n) {
-            UpdateKnnListNoCheckId(&nns[0], K, Neighbor(n, operator()(n)));
+        for (unsigned k = 0; k < N; ++k) {
+            UpdateKnnList(&nns[0], std::min(k, K), Neighbor(k, operator()(k)));
         }
         if (ids) {
             for (unsigned k = 0; k < K; ++k) {
@@ -236,20 +233,31 @@ namespace kgraph {
         // in the pool, with the beginning "k" (<="n") entries sorted.
         struct Nhood { // neighborhood
             Lock lock;
-            float radius;   // distance of k-th nearest neighbor
+            float radius;   // distance of interesting range
+            float radiusM;
             Neighbors pool;
+            unsigned L;     // # valid items in the pool,  L + 1 <= pool.size()
+            unsigned M;     // we only join items in pool[0..M)
+            bool found;     // helped found new NN in this round
             vector<unsigned> nn_old;
             vector<unsigned> nn_new;
             vector<unsigned> rnn_old;
             vector<unsigned> rnn_new;
 
             // only non-readonly method which is supposed to be called in parallel
-            void parallel_try_insert (unsigned id, float dist) {
-                if (dist > radius) return;
-                Neighbor nn(id, dist, true);
+            unsigned parallel_try_insert (unsigned id, float dist) {
+                if (dist > radius) return pool.size();
                 LockGuard guard(lock);
-                radius = pool.back().dist;
-                UpdateKnnList(&pool[0], pool.size(), nn);
+                unsigned l = UpdateKnnList(&pool[0], L, Neighbor(id, dist, true));
+                if (l <= L) { // inserted
+                    if (L + 1 < pool.size()) { // if l == L + 1, there's a duplicate
+                        ++L;
+                    }
+                    else {
+                        radius = pool[L-1].dist;
+                    }
+                }
+                return l;
             }
 
             // join should not be conflict with insert
@@ -284,9 +292,11 @@ public:
     void KGraphConstructor::init () {
         unsigned N = oracle.size();
         unsigned seed = params.seed;
+        mt19937 rng(seed);
         for (auto &nhood: nhoods) {
             nhood.nn_new.resize(params.S * 2);
-            nhood.pool.resize(params.K);
+            nhood.pool.resize(params.L+1);
+            nhood.radius = numeric_limits<float>::max();
         }
 #pragma omp parallel
         {
@@ -295,37 +305,44 @@ public:
 #else
             mt19937 rng(seed);
 #endif
-            vector<unsigned> random(params.K + 1);
+            vector<unsigned> random(params.S + 1);
 #pragma omp for
             for (unsigned n = 0; n < N; ++n) {
                 auto &nhood = nhoods[n];
                 Neighbors &pool = nhood.pool;
                 GenRandom(rng, &nhood.nn_new[0], nhood.nn_new.size(), N);
                 GenRandom(rng, &random[0], random.size(), N);
+                nhood.L = params.S;
+                nhood.M = params.S;
                 unsigned i = 0;
-                for (auto &nn: nhood.pool) {
+                for (unsigned l = 0; l < nhood.L; ++l) {
                     if (random[i] == n) ++i;
+                    auto &nn = nhood.pool[l];
                     nn.id = random[i++];
                     nn.dist = oracle(nn.id, n);
                     nn.flag = true;
                 }
-                sort(pool.begin(), pool.end());
+                sort(pool.begin(), pool.begin() + nhood.L);
             }
         }
-        n_comps += N * params.K;
     }
 
     void KGraphConstructor::join () {
         size_t cc = 0;
-        vector<bool> color(oracle.size());
 #pragma omp parallel for default(shared) schedule(dynamic, 100) reduction(+:cc)
         for (unsigned n = 0; n < oracle.size(); ++n) {
+            size_t uu = 0;
+            nhoods[n].found = false;
             nhoods[n].join([&](unsigned i, unsigned j) {
                     float dist = oracle(i, j);
                     ++cc;
-                    nhoods[i].parallel_try_insert(j, dist);
+                    unsigned r;
+                    r = nhoods[i].parallel_try_insert(j, dist);
+                    if (r < params.K) ++uu;
                     nhoods[j].parallel_try_insert(i, dist);
+                    if (r < params.K) ++uu;
             });
+            nhoods[n].found = uu > 0;
         }
         n_comps += cc;
     }
@@ -343,13 +360,31 @@ public:
 #pragma omp parallel for
         for (unsigned n = 0; n < N; ++n) {
             auto &nhood = nhoods[n];
+            if (nhood.found) {
+                unsigned maxl = std::min(nhood.M + params.S, nhood.L);
+                unsigned c = 0;
+                unsigned l = 0;
+                while ((l < maxl) && (c < params.S)) {
+                    if (nhood.pool[l].flag) ++c;
+                    ++l;
+                }
+                nhood.M = l;
+            }
+            BOOST_VERIFY(nhood.M > 0);
+            nhood.radiusM = nhood.pool[nhood.M-1].dist;
+        }
+#pragma omp parallel for
+        for (unsigned n = 0; n < N; ++n) {
+            auto &nhood = nhoods[n];
             auto &nn_new = nhood.nn_new;
             auto &nn_old = nhood.nn_old;
-            for (auto &nn: nhood.pool) {
-                auto &nhood_o = nhoods[nn.id];
+            unsigned l = 0;
+            for (unsigned l = 0; l < nhood.M; ++l) {
+                auto &nn = nhood.pool[l];
+                auto &nhood_o = nhoods[nn.id];  // nhood on the other side of the edge
                 if (nn.flag) {
                     nn_new.push_back(nn.id);
-                    if (nn.dist > nhood_o.radius) {
+                    if (nn.dist > nhood_o.radiusM) {
                         LockGuard guard(nhood_o.lock);
                         nhood_o.rnn_new.push_back(n);
                     }
@@ -357,7 +392,7 @@ public:
                 }
                 else {
                     nn_old.push_back(nn.id);
-                    if (nn.dist > nhood_o.radius) {
+                    if (nn.dist > nhood_o.radiusM) {
                         LockGuard guard(nhood_o.lock);
                         nhood_o.rnn_old.push_back(n);
                     }
@@ -369,14 +404,14 @@ public:
             auto &nn_old = nhoods[i].nn_old;
             auto &rnn_new = nhoods[i].rnn_new;
             auto &rnn_old = nhoods[i].rnn_old;
-            if (rnn_new.size() > params.S) {
+            if (params.R && (rnn_new.size() > params.R)) {
                 random_shuffle(rnn_new.begin(), rnn_new.end());
-                rnn_new.resize(params.S);
+                rnn_new.resize(params.R);
             }
             nn_new.insert(nn_new.end(), rnn_new.begin(), rnn_new.end());
-            if (rnn_old.size() > params.S) {
+            if (params.R && (rnn_old.size() > params.R)) {
                 random_shuffle(rnn_old.begin(), rnn_old.end());
-                rnn_old.resize(params.S);
+                rnn_old.resize(params.R);
             }
             nn_old.insert(nn_old.end(), rnn_old.begin(), rnn_old.end());
         }
@@ -416,36 +451,37 @@ public:
             join();
             {
                 info.cost = n_comps / total;
-                float sum_delta = 0;
+                accumulator_set<float, stats<tag::mean>> one_exact;
+                accumulator_set<float, stats<tag::mean>> one_approx;
+                accumulator_set<float, stats<tag::mean>> one_recall;
+                accumulator_set<float, stats<tag::mean>> recall;
+                accumulator_set<float, stats<tag::mean>> accuracy;
+                accumulator_set<float, stats<tag::mean>> M;
+                accumulator_set<float, stats<tag::mean>> delta;
                 for (auto const &nhood: nhoods) {
-                    sum_delta += EvaluateDelta(nhood.pool);
+                    M(nhood.M);
+                    delta(EvaluateDelta(nhood.pool, params.K));
                 }
-                info.delta = sum_delta / nhoods.size();
-                float sum_recall = 0;
-                float sum_accuracy = 0;
-                float sum_approx = 0;
-                float sum_exact = 0;
-                accumulator_set<float, stats<tag::mean>> one_rate, one_ratio;
                 for (auto const &c: controls) {
-                    sum_recall += EvaluateRecall(nhoods[c.id].pool, c.neighbors);
-                    sum_accuracy += EvaluateAccuracy(nhoods[c.id].pool, c.neighbors);
-                    one_rate(EvaluateOneRate(nhoods[c.id].pool, c.neighbors));
-                    one_ratio(EvaluateOneRatio(nhoods[c.id].pool, c.neighbors));
-                    sum_approx += nhoods[c.id].pool[0].dist;
-                    sum_exact += c.neighbors[0].dist;
+                    one_approx(nhoods[c.id].pool[0].dist);
+                    one_exact(c.neighbors[0].dist);
+                    one_recall(EvaluateOneRate(nhoods[c.id].pool, c.neighbors));
+                    recall(EvaluateRecall(nhoods[c.id].pool, c.neighbors));
+                    accuracy(EvaluateAccuracy(nhoods[c.id].pool, c.neighbors));
                 }
-                info.recall = sum_recall / controls.size();
-                info.accuracy = sum_accuracy / controls.size();
+                info.delta = mean(delta);
+                info.recall = mean(recall);
+                info.accuracy = mean(accuracy);
                 info.times = timer.elapsed();
                 cout << "iteration: " << info.iterations
                      << " recall: " << info.recall
                      << " accuracy: " << info.accuracy
                      << " cost: " << info.cost
+                     << " M: " << mean(M)
                      << " delta: " << info.delta
                      << " time: " << info.times.wall / 1e9
-                     << " one-rate: " << mean(one_rate)
-                     << " one-ratio: " << mean(one_ratio)
-                     << " one-ratio2: " << sum_approx / sum_exact
+                     << " one-recall: " << mean(one_recall)
+                     << " one-ratio: " << mean(one_approx) / mean(one_exact)
                      << endl;
             }
             if (info.delta <= params.delta) {
@@ -527,6 +563,7 @@ public:
     }
 
     void KGraph::search (SearchOracle const &oracle, SearchParams const &params, unsigned *ids, SearchInfo *pinfo) {
+        /*
         BOOST_VERIFY(graph.size() <= oracle.size());
         boost::timer::cpu_timer timer;
         vector<Neighbor> knn(params.K);
@@ -568,7 +605,7 @@ public:
                     ++n_comps;
                     Neighbor nn(id, oracle(id));
                     if (nn.dist < knn.back().dist) {
-                        unsigned r = UpdateKnnListNoCheckId(&knn[0], params.K, nn);
+                        unsigned r = UpdateKnnList(&knn[0], params.K, nn);
                         if (r < nk) {
                             nk = r;
                             ++updates;
@@ -593,6 +630,7 @@ public:
             pinfo->cost = float(n_comps) / graph.size();
             pinfo->times = timer.elapsed();
         }
+        */
     }
 }
 

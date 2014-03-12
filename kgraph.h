@@ -33,14 +33,16 @@ namespace kgraph {
     public:
         struct IndexParams {
             unsigned iterations; // # iteration
+            unsigned L;
             unsigned K;
             unsigned S;
+            unsigned R;
             unsigned controls; // control
             unsigned seed;
             float delta;
             float recall; // target recall
 
-            IndexParams (): iterations(100), K(20), S(20), controls(100), seed(1998), delta(0.005), recall(0.98) {
+            IndexParams (): iterations(100), L(50), K(10), S(5), R(20), controls(100), seed(1998), delta(0.005), recall(0.98) {
             }
 
             void check () {
