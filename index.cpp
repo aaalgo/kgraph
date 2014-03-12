@@ -51,6 +51,7 @@ int main (int argc, char *argv[]) {
     ("iterations,I", po::value(&params.iterations)->default_value(100), "expert")
     (",S", po::value(&params.S)->default_value(5), "expert, if S = 0 (default) then K will be used")
     (",R", po::value(&params.R)->default_value(0), "expert")
+    (",L", po::value(&params.L)->default_value(50), "expert")
     ("delta", po::value(&params.delta)->default_value(0.005), "expert")
     ("noise", po::value(&noise)->default_value(0), "expert")
     ("recall", po::value(&params.recall)->default_value(0.98), "expert")
