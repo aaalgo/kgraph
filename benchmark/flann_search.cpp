@@ -10,8 +10,7 @@
 #include <boost/program_options.hpp>
 #include <flann/flann.h>
 #include <kgraph.h>
-#include <kgraph-matrix.h>
-#include <kgraph-util.h>
+#include <kgraph-data.h>
 
 using namespace std;
 using namespace boost;

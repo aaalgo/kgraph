@@ -5,7 +5,7 @@
 #include <boost/program_options.hpp>
 #include <boost/timer/timer.hpp>
 #include "kgraph.h"
-#include "kgraph-matrix.h"
+#include "kgraph-data.h"
 
 using namespace std;
 using namespace boost;

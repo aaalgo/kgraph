@@ -1,5 +1,5 @@
 #include "kgraph.h"
-#include "kgraph-matrix.h"
+#include "kgraph-data.h"
 
 #ifdef __GNUC__
 #ifdef __AVX__

@@ -1,5 +1,5 @@
-#ifndef WDONG_KGRAPH_MATRIX
-#define WDONG_KGRAPH_MATRIX
+#ifndef WDONG_KGRAPH_DATA
+#define WDONG_KGRAPH_DATA
 
 #include <cstring>
 #include <malloc.h>
