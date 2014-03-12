@@ -50,14 +50,14 @@ int main (int argc, char *argv[]) {
 
     po::options_description desc_hidden("Expert options");
     desc_hidden.add_options()
-    ("iterations,I", po::value(&params.iterations)->default_value(100), "expert")
-    (",S", po::value(&params.S)->default_value(5), "expert, if S = 0 (default) then K will be used")
-    (",R", po::value(&params.R)->default_value(0), "expert")
-    (",L", po::value(&params.L)->default_value(50), "expert")
-    ("delta", po::value(&params.delta)->default_value(0.005), "expert")
-    ("noise", po::value(&noise)->default_value(0), "expert")
-    ("recall", po::value(&params.recall)->default_value(0.98), "expert")
-    ("seed", po::value(&params.seed)->default_value(1998), "")
+    ("iterations,I", po::value(&params.iterations)->default_value(default_iterations), "")
+    (",S", po::value(&params.S)->default_value(default_S), "")
+    (",R", po::value(&params.R)->default_value(default_R), "")
+    (",L", po::value(&params.L)->default_value(default_L), "")
+    ("delta", po::value(&params.delta)->default_value(default_delta), "")
+    ("recall", po::value(&params.recall)->default_value(default_recall), "")
+    ("noise", po::value(&noise)->default_value(0), "noise")
+    ("seed", po::value(&params.seed)->default_value(default_seed), "")
     ("dim,D", po::value(&D), "dimension, see format")
     ("skip", po::value(&skip)->default_value(0), "see format")
     ("gap", po::value(&gap)->default_value(0), "see format")
@@ -81,23 +81,11 @@ int main (int argc, char *argv[]) {
     }
 
     if (vm.count("help")
-            || synthetic && (vm.count("dim") == 0 || vm.count("data"))
-            || !synthetic && (vm.count("data") == 0 || (vm.count("dim") == 0 && !lshkit))) {
+            || (synthetic && (vm.count("dim") == 0 || vm.count("data")))
+            || (!synthetic && (vm.count("data") == 0 || (vm.count("dim") == 0 && !lshkit)))) {
         cout << "Usage: index [OTHER OPTIONS]... INPUT [OUTPUT]" << endl;
-        cout << "Construct k-nearest neighbor graph for Euclidean spaces using L2 distance as similarity measure..\n" << endl;
         cout << desc_visible << endl;
-        cout << "Input Format:" << endl;
-        cout << "  The INPUT file is parsed as a architecture-dependent binary file.  The initial <skip> bytes are skipped.  After that, every <D * sizeof(float)> bytes are read as a D-dimensional vector.  There could be an optional <gap>-byte gap between each vectors.  Therefore, the program expect the file to contain [size(INPUT)-skip]/[D*sizeof(float)+gap] vectors.\n"
-                "  If the option \"--lshkit\" is specified, the initial 3*sizeof(unsigned) bytes are unsignederpreted as three 32-bit unsignedegers: sizeof(float), number of vectors in the file and the dimension.  The program then sets D = dimension, skip = 3 * sizeof(unsigned) and gap = 0.\n"  << endl;
-        cout << "Output Format:" << endl;
-        cout << "  Each input vector is assigned an serial ID (0, 1, ...) according to the order they appear in the input.  Each output line contains the ID of a pounsigned followed by the K IDs of its nearest neighbor.\n" << endl;
-        cout << "Control:" << endl;
-        cout << "  To measure the accuracy of the algorithm, <control> pounsigneds are randomly sampled, and their k-nearest neighbors are found with brute-force search.  The control is then used to measure the recall of the main algorithm.\n" << endl;
-        cout << "Progress Report:" << endl;
-        cout << "  The following parameters are reported after each iteration:\n"
-                "  update: update rate of the K * N result entries.\n"
-                "  recall: estimated recall, or 0 if no control is specified.\n"
-                "  cost: number of similarity evaluate / [N*(N-1)/2, the brute force cost].\n";
+        cout << desc_hidden << endl;
         return 0;
     }
 
@@ -169,6 +157,7 @@ int main (int argc, char *argv[]) {
     {
         auto_cpu_timer timer;
         kgraph->build(oracle, params, &info);
+        cerr << info.stop_condition << endl;
     }
     if (output_path.size()) {
         kgraph->save(output_path.c_str());

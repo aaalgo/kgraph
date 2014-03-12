@@ -1,10 +1,9 @@
 #include <omp.h>
 #include <mutex>
-#include <set>
 #include <iostream>
 #include <fstream>
-#include <algorithm>
 #include <random>
+#include <algorithm>
 #include <boost/timer/timer.hpp>
 #include <boost/dynamic_bitset.hpp>
 #include <boost/accumulators/accumulators.hpp>
@@ -20,12 +19,14 @@ namespace kgraph {
     using namespace boost;
     using namespace boost::accumulators;
 
+    unsigned verbosity = default_verbosity;
+
     typedef boost::detail::spinlock Lock;
     typedef std::lock_guard<Lock> LockGuard;
 
     // generate size distinct random numbers < N
     template <typename RNG>
-    void GenRandom (RNG &rng, unsigned *addr, unsigned size, unsigned N) {
+    static void GenRandom (RNG &rng, unsigned *addr, unsigned size, unsigned N) {
         for (unsigned i = 0; i < size; ++i) {
             addr[i] = rng() % (N - size);
         }
@@ -56,7 +57,7 @@ namespace kgraph {
 
     typedef vector<Neighbor> Neighbors;
 
-    // both pool and knn should be sorted
+    // both pool and knn should be sorted in ascending order
     static float EvaluateRecall (Neighbors const &pool, Neighbors const &knn) {
         if (knn.empty()) return 1.0;
         unsigned found = 0;
@@ -64,17 +65,16 @@ namespace kgraph {
         unsigned n_k = 0;
         for (;;) {
             if (n_p >= pool.size()) break;
-            while ((n_k < knn.size()) && (knn[n_k].dist < pool[n_p].dist)) ++n_k;
             if (n_k >= knn.size()) break;
-            unsigned n = n_k;
-            while ((n < knn.size()) && (knn[n].dist == pool[n_p].dist)) {
-                if (knn[n].id == pool[n_p].id) {
-                    ++found;
-                    break;
-                }
-                ++n;
+            if (knn[n_k].dist < pool[n_p].dist) {
+                ++n_k;
             }
-            ++n_p;
+            else if (knn[n_k].dist == pool[n_p].dist) {
+                ++found;
+                ++n_k;
+                ++n_p;
+            }
+            else throw runtime_error("distance is unstable");
         }
         return float(found) / knn.size();
     }
@@ -92,25 +92,20 @@ namespace kgraph {
         return cnt > 0 ? sum / cnt: 0;
     }
 
-    static float EvaluateOneRate (Neighbors const &pool, Neighbors const &knn) {
-        if (pool[0].id == knn[0].id) return 1.0;
+    static float EvaluateOneRecall (Neighbors const &pool, Neighbors const &knn) {
         if (pool[0].dist == knn[0].dist) return 1.0;
         return 0;
     }
 
-    static float EvaluateOneRatio (Neighbors const &pool, Neighbors const &knn) {
-        return pool[0].dist / knn[0].dist;
-    }
-
     static float EvaluateDelta (Neighbors const &pool, unsigned K) {
         unsigned c = 0;
-        if (pool.size() < K) K = pool.size();
-        for (unsigned i = 0; i < K; ++i) {
+        unsigned N = K;
+        if (pool.size() < N) N = pool.size();
+        for (unsigned i = 0; i < N; ++i) {
             if (pool[i].flag) ++c;
         }
         return float(c) / K;
     }
-
 
     struct Control {
         unsigned id;
@@ -157,32 +152,9 @@ namespace kgraph {
         return i;
     }
 
-    /*
-    static inline unsigned UpdateKnnListNoCheckId (Neighbor *addr, unsigned K, Neighbor nn) {
-        // find the location to insert
-        unsigned K_1 = K - 1;
-        if (nn.dist > addr[K_1].dist) return K;
-        unsigned i = K_1;
-        while (i > 0) {
-            unsigned j = i - 1;
-            if (addr[j].dist < nn.dist) break;
-            i = j;
-        }
-        // i <= K-1
-        unsigned j = K_1;
-        while (j > i) {
-            addr[j] = addr[j-1];
-            --j;
-        }
-        addr[i] = nn;
-        return i;
-    }
-    */
-
     void LinearSearch (IndexOracle const &oracle, unsigned i, unsigned K, vector<Neighbor> *pnns) {
         vector<Neighbor> nns(K+1);
         unsigned N = oracle.size();
-        BOOST_VERIFY(N >= K + 1);
         Neighbor nn;
         nn.id = 0;
         nn.flag = true; // we don't really use this
@@ -190,7 +162,7 @@ namespace kgraph {
         while (nn.id < N) {
             if (nn.id != i) {
                 nn.dist = oracle(i, nn.id);
-                int r = UpdateKnnList(&nns[0], k, nn);
+                UpdateKnnList(&nns[0], k, nn);
                 if (k < K) ++k;
             }
             ++nn.id;
@@ -200,20 +172,21 @@ namespace kgraph {
     }
 
     unsigned SearchOracle::search (unsigned K, float epsilon, unsigned *ids) const {
-        /*
         vector<Neighbor> nns(K+1);
         unsigned N = size();
-        BOOST_VERIFY(N >= K);
+        unsigned L = 0;
         for (unsigned k = 0; k < N; ++k) {
-            UpdateKnnList(&nns[0], std::min(k, K), Neighbor(k, operator()(k)));
+            float dist = operator () (k);
+            if (dist > epsilon) continue;
+            UpdateKnnList(&nns[0], L, Neighbor(k, dist));
+            if (L < K) ++L;
         }
         if (ids) {
-            for (unsigned k = 0; k < K; ++k) {
+            for (unsigned k = 0; k < L; ++k) {
                 ids[k] = nns[k].id;
             }
         }
-        */
-        return 0;
+        return L;
     }
 
     void GenerateControl (IndexOracle const &oracle, unsigned C, unsigned K, vector<Control> *pcontrols) {
@@ -255,17 +228,17 @@ namespace kgraph {
             is.read(magic, sizeof(magic));
             is.read(reinterpret_cast<char *>(&major), sizeof(major));
             is.read(reinterpret_cast<char *>(&minor), sizeof(minor));
+            if (major != VERSION_MAJOR) throw runtime_error("data version not supported.");
             is.read(reinterpret_cast<char *>(&N), sizeof(N));
-            BOOST_VERIFY(is);
+            if (!is) runtime_error("error reading index file.");
             for (unsigned i = 0; i < KGRAPH_MAGIC_SIZE; ++i) {
-                BOOST_VERIFY(KGRAPH_MAGIC[i] == magic[i]);
+                if (KGRAPH_MAGIC[i] != magic[i]) runtime_error("index corrupted.");
             }
-            BOOST_VERIFY(major == VERSION_MAJOR && minor == VERSION_MINOR);
             graph.resize(N);
             for (auto &knn: graph) {
                 unsigned K;
                 is.read(reinterpret_cast<char *>(&K), sizeof(K));
-                BOOST_VERIFY(is);
+                if (!is) runtime_error("error reading index file.");
                 knn.resize(K);
                 is.read(reinterpret_cast<char *>(&knn[0]), K * sizeof(knn[0]));
             }
@@ -287,40 +260,42 @@ namespace kgraph {
 
         virtual void build (IndexOracle const &oracle, IndexParams const &param, IndexInfo *info);
 
-        virtual void search (SearchOracle const &oracle, SearchParams const &params, unsigned *ids, SearchInfo *pinfo) {
-            /*
-            BOOST_VERIFY(graph.size() <= oracle.size());
-            boost::timer::cpu_timer timer;
-            vector<Neighbor> knn(params.K);
+        virtual unsigned search (SearchOracle const &oracle, SearchParams const &params, unsigned *ids, SearchInfo *pinfo) {
+            if (graph.size() > oracle.size()) {
+                throw runtime_error("dataset larger than index");
+            }
+            vector<Neighbor> knn(params.K + params.M +1);
             boost::dynamic_bitset<> flags(graph.size(), false);
 
-            if (params.init) {
-                for (unsigned k = 0; k < params.K; ++k) {
-                    knn[k].id = ids[k];
-                }
+            unsigned L = params.init;
+            BOOST_VERIFY(L < params.K);
+            if (L) BOOST_VERIFY(ids);
+            for (unsigned l = 0; l < params.init; ++l) {
+                knn[l].id = ids[l];
             }
-            else {
+            if (L == 0) {
                 unsigned seed = params.seed;
                 if (seed == 0) seed = time(NULL);
                 mt19937 rng(seed);
-                vector<unsigned> random(params.K);
-                GenRandom(rng, &random[0], params.K, graph.size());
-                for (unsigned k = 0; k < params.K; ++k) {
-                    knn[k].id = random[k];
+                L = params.M;
+                vector<unsigned> random(L);
+                GenRandom(rng, &random[0], L, graph.size());
+                for (unsigned l = 0; l < L; ++l) {
+                    knn[l].id = random[l];
                 }
             }
-            for (unsigned k = 0; k < params.K; ++k) {
+            for (unsigned k = 0; k < L; ++k) {
                 flags[knn[k].id] = false;
                 knn[k].flag = true;
                 knn[k].dist = oracle(knn[k].id);
             }
-            sort(knn.begin(), knn.end());
+            sort(knn.begin(), knn.begin() + L);
 
             unsigned updates = 0;
             unsigned n_comps = 0;
             unsigned k =  0;
-            while (k < params.K) {
-                unsigned nk = params.K;
+            while (k < L) {
+                unsigned nk = L;
                 if (knn[k].flag) {
                     knn[k].flag = false;
                     unsigned cur = knn[k].id;
@@ -328,13 +303,13 @@ namespace kgraph {
                         if (flags[id]) continue;
                         flags[id] = true;
                         ++n_comps;
+                        float dist = oracle(id);
+                        if (dist > params.epsilon) continue;
                         Neighbor nn(id, oracle(id));
-                        if (nn.dist < knn.back().dist) {
-                            unsigned r = UpdateKnnList(&knn[0], params.K, nn);
-                            if (r < nk) {
-                                nk = r;
-                                ++updates;
-                            }
+                        unsigned r = UpdateKnnList(&knn[0], L, nn);
+                        if (L + 1 < knn.size()) ++L;
+                        if (r < nk) {
+                            nk = r;
                         }
                     }
                 }
@@ -345,17 +320,17 @@ namespace kgraph {
                     ++k;
                 }
             }
+            if (L > params.K) L = params.K;
             if (ids) {
-                for (unsigned k = 0; k < params.K; ++k) {
+                for (unsigned k = 0; k < L; ++k) {
                     ids[k] = knn[k].id;
                 }
             }
             if (pinfo) {
                 pinfo->updates = updates;
                 pinfo->cost = float(n_comps) / graph.size();
-                pinfo->times = timer.elapsed();
             }
-            */
+            return L;
         }
     };
 
@@ -501,7 +476,6 @@ namespace kgraph {
                 auto &nhood = nhoods[n];
                 auto &nn_new = nhood.nn_new;
                 auto &nn_old = nhood.nn_old;
-                unsigned l = 0;
                 for (unsigned l = 0; l < nhood.M; ++l) {
                     auto &nn = nhood.pool[l];
                     auto &nhood_o = nhoods[nn.id];  // nhood on the other side of the edge
@@ -546,14 +520,12 @@ public:
             boost::timer::cpu_timer timer;
             //params.check();
             unsigned N = oracle.size();
-            BOOST_VERIFY(N > params.K); // has to be > because an object cannot be it's own neighbor.
+            if (N <= params.K) throw runtime_error("K larger than dataset size");
 
             vector<Control> controls;
-            cerr << "Generating control..." << endl;
+            if (verbosity > 0) cerr << "Generating control..." << endl;
             GenerateControl(oracle, params.controls, params.K, &controls);
-
-            cerr << "Contructing graph..." << endl;
-            cerr << "Initializing..." << endl;
+            if (verbosity > 0) cerr << "Initializing..." << endl;
             // initialize nhoods
             init();
 
@@ -566,8 +538,6 @@ public:
             info.cost = 0;
             info.iterations = 0;
             info.delta = 1.0;
-
-            float update_time = 0;
 
             for (unsigned it = 0; (params.iterations <= 0) || (it < params.iterations); ++it) {
                 ++info.iterations;
@@ -588,7 +558,7 @@ public:
                     for (auto const &c: controls) {
                         one_approx(nhoods[c.id].pool[0].dist);
                         one_exact(c.neighbors[0].dist);
-                        one_recall(EvaluateOneRate(nhoods[c.id].pool, c.neighbors));
+                        one_recall(EvaluateOneRecall(nhoods[c.id].pool, c.neighbors));
                         recall(EvaluateRecall(nhoods[c.id].pool, c.neighbors));
                         accuracy(EvaluateAccuracy(nhoods[c.id].pool, c.neighbors));
                     }
@@ -596,16 +566,18 @@ public:
                     info.recall = mean(recall);
                     info.accuracy = mean(accuracy);
                     auto times = timer.elapsed();
-                    cout << "iteration: " << info.iterations
-                         << " recall: " << info.recall
-                         << " accuracy: " << info.accuracy
-                         << " cost: " << info.cost
-                         << " M: " << mean(M)
-                         << " delta: " << info.delta
-                         << " time: " << times.wall / 1e9
-                         << " one-recall: " << mean(one_recall)
-                         << " one-ratio: " << mean(one_approx) / mean(one_exact)
-                         << endl;
+                    if (verbosity > 0) {
+                        cerr << "iteration: " << info.iterations
+                             << " recall: " << info.recall
+                             << " accuracy: " << info.accuracy
+                             << " cost: " << info.cost
+                             << " M: " << mean(M)
+                             << " delta: " << info.delta
+                             << " time: " << times.wall / 1e9
+                             << " one-recall: " << mean(one_recall)
+                             << " one-ratio: " << mean(one_approx) / mean(one_exact)
+                             << endl;
+                    }
                 }
                 if (info.delta <= params.delta) {
                     info.stop_condition = IndexInfo::DELTA;
@@ -615,9 +587,7 @@ public:
                     info.stop_condition = IndexInfo::RECALL;
                     break;
                 }
-                boost::timer::cpu_timer timer2;
                 update();
-                update_time += timer2.elapsed().wall / 1e9;
             }
             graph.resize(N);
             for (unsigned n = 0; n < N; ++n) {
@@ -631,7 +601,6 @@ public:
             if (pinfo) {
                 *pinfo = info;
             }
-            cerr << "UPDATE: " << update_time << endl;
         }
     };
 

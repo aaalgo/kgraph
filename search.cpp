@@ -16,7 +16,6 @@
 #include <boost/program_options.hpp>
 #include <kgraph.h>
 #include <kgraph-matrix.h>
-#include <kgraph-util.h>
 
 using namespace std;
 using namespace boost;
@@ -24,6 +23,34 @@ using namespace kgraph;
 namespace po = boost::program_options; 
 
 typedef KGRAPH_VALUE_TYPE value_type;
+
+typedef Matrix<unsigned> IndexMatrix;
+float AverageRecall (IndexMatrix const &eval, IndexMatrix const &result, unsigned K = 0) {
+    if (K == 0) {
+        K = result.dim();
+    }
+    BOOST_VERIFY(eval.dim() >= K);
+    BOOST_VERIFY(result.dim() >= K);
+    BOOST_VERIFY(eval.size() >= result.size());
+    float sum = 0;
+    for (unsigned i = 0; i < result.size(); ++i) {
+        unsigned const *gs = eval[i];
+        unsigned const *re = result[i];
+        // compare
+        unsigned found = 0;
+        for (unsigned j = 0; j < K; ++j) {
+            for (unsigned k = 0; k < K; ++k) {
+                if (gs[j] == re[k]) {
+                    ++found;
+                    break;
+                }
+            }
+        }
+        sum += float(found) / K;
+    }
+    return sum / result.size();
+}
+
 
 int main (int argc, char *argv[]) {
     vector<string> params;
@@ -89,7 +116,7 @@ int main (int argc, char *argv[]) {
         result.resize(query.size(), K);
 #pragma omp parallel for
         for (unsigned i = 0; i < query.size(); ++i) {
-            oracle.query(query[i]).search(K, result[i]);
+            oracle.query(query[i]).search(K, default_epsilon, result[i]);
         }
     }
     else {
@@ -99,7 +126,8 @@ int main (int argc, char *argv[]) {
         if (init_path.size()) {
             params.init = true;
         }
-        KGraph kgraph(index_path);
+        KGraph *kgraph = KGraph::make();
+        kgraph->load(index_path.c_str());
         boost::timer::auto_cpu_timer timer;
         cerr << "Searching..." << endl;
 
@@ -107,11 +135,12 @@ int main (int argc, char *argv[]) {
 #pragma omp parallel for reduction(+:cost)
         for (unsigned i = 0; i < query.size(); ++i) {
             KGraph::SearchInfo info;
-            kgraph.search(oracle.query(query[i]), params, result[i], &info);
+            kgraph->search(oracle.query(query[i]), params, result[i], &info);
             cost += info.cost;
         }
         cost /= query.size();
         cerr << "Cost: " << cost << endl;
+        delete kgraph;
     }
     if (output_path.size()) {
         result.save_lshkit(output_path);
