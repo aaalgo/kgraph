@@ -1,0 +1,23 @@
+CC=g++ 
+
+OPT = -O3 
+OPENMP = -fopenmp
+CXXFLAGS += -Wall -g -std=c++11 -I. $(OPENMP) $(OPT) $(ARCH)
+LDFLAGS += $(OPENMP) 
+LDLIBS += -lboost_timer -lboost_chrono -lboost_system -lboost_program_options -lm
+
+.PHONY:	benchmark all clean release
+
+PROGS = index search
+
+all:	$(PROGS)
+
+$(PROGS):	%:	%.cpp 
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $*.cpp libkgraph.so $(LDLIBS)
+
+%.o:	%.cpp $(HEADERS)
+	$(CXX) $(CXXFLAGS) -c $*.cpp 
+
+clean:
+	rm -f $(PROGS) *.o
+
