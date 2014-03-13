@@ -12,11 +12,6 @@ PROGS = flann_index flann_search split lshkit2fvec fvec2lshkit
 
 all:	$(PROGS)
 
-
-#flann_index:	kgraph.cpp index.cpp
-
-#flann_search:	kgraph.cpp search.cpp
-
 clean:
 	rm -f $(PROGS)
 
