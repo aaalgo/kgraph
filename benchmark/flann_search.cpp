@@ -64,8 +64,8 @@ int main (int argc, char *argv[]) {
     data.load_lshkit(data_path);
     query.load_lshkit(query_path);
 
-    kgraph::IndexMatrix result(query.size(), K);
-    kgraph::Matrix<float, 1> dists(query.size(), K);
+    kgraph::Matrix<unsigned,1> result(query.size(), K);
+    kgraph::Matrix<float,1> dists(query.size(), K);
 
     flann::Matrix<float> fdata(data[0], data.size(), data.dim());
     flann::Matrix<float> fquery(query[0], query.size(), query.dim());
@@ -81,16 +81,42 @@ int main (int argc, char *argv[]) {
     cerr << "Searching..." << endl;
     index.knnSearch(fquery, fresult, fdists, K, params);
     timer.stop();
-    float time = timer.elapsed().wall / 1e9;
     timer.report();
+    float time = timer.elapsed().wall / 1e9;
     if (output_path.size()) {
         result.save_lshkit(output_path);
     }
     float recall = 0;
     if (eval_path.size()) {
-        kgraph::IndexMatrix gs;
+        flann::L2<float> l2;
+        kgraph::Matrix<unsigned> gs; // gold standard
         gs.load_lshkit(eval_path);
-        recall = kgraph::AverageRecall(gs, result, K);
+        BOOST_VERIFY(gs.dim() >= K);
+        BOOST_VERIFY(gs.size() >= query.size());
+        kgraph::Matrix<float> gs_dist(query.size(), K);
+        kgraph::Matrix<float> result_dist(query.size(), K);
+#pragma omp parallel for
+        for (unsigned i = 0; i < query.size(); ++i) {
+            float *gs_dist_row = gs_dist[i];
+            float *result_dist_row = result_dist[i];
+            unsigned const *gs_row = gs[i];
+            unsigned const *result_row = result[i];
+            for (unsigned k = 0; k < K; ++k) {
+                gs_dist_row[k] = l2(query[i], data[gs_row[k]], data.dim());
+                result_dist_row[k] = l2(query[i], data[result_row[k]], data.dim());
+            }
+            sort(gs_dist_row, gs_dist_row + K);
+            sort(result_dist_row, result_dist_row + K);
+        }
+        /*
+        for (unsigned i = 0; i < 10; ++i) {
+            for (unsigned j = 0;j < 10; ++j) {
+                cout << ' ' << gs_dist[i][j] << ':' << result_dist[i][j];
+            }
+            cout << endl;
+        }
+        */
+        recall = kgraph::AverageRecall(gs_dist, result_dist, K);
     }
     cout << "Time: " << time << " Recall: " << recall << endl;
     return 0;

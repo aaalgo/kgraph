@@ -73,7 +73,7 @@ int main (int argc, char *argv[]) {
 
     Matrix<value_type> data;
     Matrix<value_type> query;
-    IndexMatrix result; //(query.size(), U);
+    Matrix<unsigned> result; //(query.size(), U);
     unsigned init = 0;
 
     data.load_lshkit(input_path);
@@ -124,9 +124,27 @@ int main (int argc, char *argv[]) {
         result.save_lshkit(output_path);
     }
     if (eval_path.size()) {
-        IndexMatrix gs;
+        Matrix<unsigned> gs;
         gs.load_lshkit(eval_path);
-        recall = AverageRecall(gs, result, K);
+        BOOST_VERIFY(gs.dim() >= K);
+        BOOST_VERIFY(gs.size() >= query.size());
+        kgraph::Matrix<float> gs_dist(query.size(), K);
+        kgraph::Matrix<float> result_dist(query.size(), K);
+#pragma omp parallel for
+        for (unsigned i = 0; i < query.size(); ++i) {
+            auto Q = oracle.query(query[i]);
+            float *gs_dist_row = gs_dist[i];
+            float *result_dist_row = result_dist[i];
+            unsigned const *gs_row = gs[i];
+            unsigned const *result_row = result[i];
+            for (unsigned k = 0; k < K; ++k) {
+                gs_dist_row[k] = Q(gs_row[k]);
+                result_dist_row[k] = Q(result_row[k]);
+            }
+            sort(gs_dist_row, gs_dist_row + K);
+            sort(result_dist_row, result_dist_row + K);
+        }
+        recall = AverageRecall(gs_dist, result_dist, K);
     }
     cout << "Time: " << time << " Recall: " << recall << " Cost: " << cost << endl;
 

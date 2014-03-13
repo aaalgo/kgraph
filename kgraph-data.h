@@ -209,27 +209,31 @@ namespace kgraph {
         }
     };
 
-    typedef Matrix<unsigned> IndexMatrix;
-    inline float AverageRecall (IndexMatrix const &eval, IndexMatrix const &result, unsigned K = 0) {
+    inline float AverageRecall (Matrix<float> const &gs, Matrix<float> const &result, unsigned K = 0) {
         if (K == 0) {
             K = result.dim();
         }
-        BOOST_VERIFY(eval.dim() >= K);
+        BOOST_VERIFY(gs.dim() >= K);
         BOOST_VERIFY(result.dim() >= K);
-        BOOST_VERIFY(eval.size() >= result.size());
+        BOOST_VERIFY(gs.size() >= result.size());
         float sum = 0;
         for (unsigned i = 0; i < result.size(); ++i) {
-            unsigned const *gs = eval[i];
-            unsigned const *re = result[i];
+            float const *gs_row = gs[i];
+            float const *re_row = result[i];
             // compare
             unsigned found = 0;
-            for (unsigned j = 0; j < K; ++j) {
-                for (unsigned k = 0; k < K; ++k) {
-                    if (gs[j] == re[k]) {
-                        ++found;
-                        break;
-                    }
+            unsigned gs_n = 0;
+            unsigned re_n = 0;
+            while ((gs_n < K) && (re_n < K)) {
+                if (gs_row[gs_n] < re_row[re_n]) {
+                    ++gs_n;
                 }
+                else if (gs_row[gs_n] == re_row[re_n]) {
+                    ++found;
+                    ++gs_n;
+                    ++re_n;
+                }
+                else throw runtime_error("distance is unstable");
             }
             sum += float(found) / K;
         }

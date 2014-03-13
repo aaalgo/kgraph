@@ -4,7 +4,7 @@
 #include <boost/program_options.hpp>
 #include <boost/assert.hpp>
 #include <kgraph.h>
-#include <kgraph-matrix.h>
+#include <kgraph-data.h>
 
 using namespace std;
 
