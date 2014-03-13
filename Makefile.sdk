@@ -4,7 +4,7 @@ OPT = -O3
 OPENMP = -fopenmp
 CXXFLAGS += -Wall -g -std=c++11 -I. $(OPENMP) $(OPT) $(ARCH)
 LDFLAGS += $(OPENMP) 
-LDLIBS += -lboost_timer -lboost_chrono -lboost_system -lboost_program_options -lm
+LDLIBS += -lboost_timer -lboost_chrono -lboost_system -lboost_program_options -lm -lrt
 
 .PHONY:	benchmark all clean release
 
