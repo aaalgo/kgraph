@@ -649,9 +649,11 @@ public:
                 }
                 update();
             }
+            M.resize(N);
             graph.resize(N);
             for (unsigned n = 0; n < N; ++n) {
                 auto &knn = graph[n];
+                M[n] = nhoods[n].M;
                 auto const &pool = nhoods[n].pool;
                 knn.resize(params.L);
                 for (unsigned k = 0; k < params.L; ++k) {
@@ -666,6 +668,7 @@ public:
 
     void KGraphImpl::build (IndexOracle const &oracle, IndexParams const &param, IndexInfo *info) {
         KGraphConstructor con(oracle, param, info);
+        M.swap(con.M);
         graph.swap(con.graph);
     }
 
