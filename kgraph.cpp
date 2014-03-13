@@ -215,6 +215,7 @@ namespace kgraph {
 
     class KGraphImpl: public KGraph {
     protected:
+        vector<unsigned> M;
         vector<vector<unsigned>> graph;
     public:
         virtual ~KGraphImpl () {
@@ -236,8 +237,11 @@ namespace kgraph {
                 if (KGRAPH_MAGIC[i] != magic[i]) runtime_error("index corrupted.");
             }
             graph.resize(N);
-            for (auto &knn: graph) {
+            M.resize(N);
+            for (unsigned i = 0; i < graph.size(); ++i) {
+                auto &knn = graph[i];
                 unsigned K;
+                is.read(reinterpret_cast<char *>(&M[i]), sizeof(M[i]));
                 is.read(reinterpret_cast<char *>(&K), sizeof(K));
                 if (!is) runtime_error("error reading index file.");
                 knn.resize(K);
@@ -252,8 +256,10 @@ namespace kgraph {
             os.write(reinterpret_cast<char const *>(&VERSION_MAJOR), sizeof(VERSION_MAJOR));
             os.write(reinterpret_cast<char const *>(&VERSION_MINOR), sizeof(VERSION_MINOR));
             os.write(reinterpret_cast<char const *>(&N), sizeof(N));
-            for (auto const &knn: graph) {
+            for (unsigned i = 0; i < graph.size(); ++i) {
+                auto const &knn = graph[i];
                 uint32_t K = knn.size();
+                os.write(reinterpret_cast<char const *>(&M[i]), sizeof(M[i]));
                 os.write(reinterpret_cast<char const *>(&K), sizeof(K));
                 os.write(reinterpret_cast<char const *>(&knn[0]), K * sizeof(knn[0]));
             }
@@ -261,6 +267,7 @@ namespace kgraph {
 
         virtual void build (IndexOracle const &oracle, IndexParams const &param, IndexInfo *info);
 
+        /*
         virtual void prune (unsigned K) {
             for (auto &v: graph) {
                 if (v.size() > K) {
@@ -304,12 +311,13 @@ namespace kgraph {
             }
             graph.swap(pruned);
         }
+        */
 
         virtual unsigned search (SearchOracle const &oracle, SearchParams const &params, unsigned *ids, SearchInfo *pinfo) {
             if (graph.size() > oracle.size()) {
                 throw runtime_error("dataset larger than index");
             }
-            vector<Neighbor> knn(params.K + params.M +1);
+            vector<Neighbor> knn(params.K + params.P +1);
             boost::dynamic_bitset<> flags(graph.size(), false);
 
             unsigned L = params.init;
@@ -322,7 +330,7 @@ namespace kgraph {
                 unsigned seed = params.seed;
                 if (seed == 0) seed = time(NULL);
                 mt19937 rng(seed);
-                L = params.M;
+                L = params.P;
                 vector<unsigned> random(L);
                 GenRandom(rng, &random[0], L, graph.size());
                 for (unsigned l = 0; l < L; ++l) {
@@ -344,7 +352,13 @@ namespace kgraph {
                 if (knn[k].flag) {
                     knn[k].flag = false;
                     unsigned cur = knn[k].id;
-                    for (unsigned id: graph[cur]) {
+                    unsigned maxM = M[cur];
+                    auto const &neighbors = graph[cur];
+                    if (maxM > neighbors.size()) {
+                        maxM = neighbors.size();
+                    }
+                    for (unsigned m = 0; m < maxM; ++m) {
+                        unsigned id = neighbors[m];
                         if (flags[id]) continue;
                         flags[id] = true;
                         ++n_comps;

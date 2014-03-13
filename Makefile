@@ -15,14 +15,14 @@ LDLIBS += -lboost_timer -lboost_chrono -lboost_system -lboost_program_options -l
 
 COMMON = kgraph.o metric.o
 HEADERS = kgraph.h kgraph-data.h 
-PROGS = index search prune #stat 
+PROGS = index search #prune #stat 
 
 all:	libkgraph.so $(PROGS)
 
 release:	libkgraph.so
 	rm -rf release
 	mkdir release
-	cp kgraph.h kgraph-data.h libkgraph.so index.cpp search.cpp prune release
+	cp kgraph.h kgraph-data.h libkgraph.so index.cpp search.cpp release
 	cp Makefile.sdk release/Makefile
 
 benchmark:

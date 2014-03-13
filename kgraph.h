@@ -7,7 +7,7 @@ namespace kgraph {
     static unsigned const default_iterations =  100;
     static unsigned const default_L = 50;
     static unsigned const default_K = 10;
-    static unsigned const default_M = 100;
+    static unsigned const default_P = 100;
     static unsigned const default_S = 10;
     static unsigned const default_R = 100;
     static unsigned const default_controls = 100;
@@ -51,12 +51,12 @@ namespace kgraph {
 
         struct SearchParams {
             unsigned K;
-            unsigned M;
+            unsigned P;
             float epsilon;
             unsigned seed;
             unsigned init;
 
-            SearchParams (): K(default_K), M(default_M), epsilon(default_epsilon), seed(1998), init(0) {
+            SearchParams (): K(default_K), P(default_P), epsilon(default_epsilon), seed(1998), init(0) {
             }
         };
 
@@ -84,7 +84,6 @@ namespace kgraph {
         virtual void load (char const *path) = 0;
         virtual void save (char const *path) = 0; // save to file
         virtual void build (IndexOracle const &oracle, IndexParams const &params, IndexInfo *info) = 0;
-        virtual void prune (unsigned K) = 0;
         virtual unsigned search (SearchOracle const &oracle, SearchParams const &params, unsigned *ids, SearchInfo *info) = 0;
         static KGraph *create ();
     };
