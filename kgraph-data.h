@@ -20,11 +20,12 @@
 #endif
 #endif
 
-extern float kgraph_float_l2sqr_avx (float const *t1, float const *t2, unsigned dim);
-extern float kgraph_float_l2sqr_sse2 (float const *t1, float const *t2, unsigned dim);
-extern float kgraph_uint8_l2sqr_sse2 (uint8_t const *t1, uint8_t const *t2, unsigned dim);
-
 namespace kgraph {
+
+    extern float float_l2sqr_avx (float const *t1, float const *t2, unsigned dim);
+    extern float float_l2sqr_sse2 (float const *t1, float const *t2, unsigned dim);
+    extern float uint8_l2sqr_sse2 (uint8_t const *t1, uint8_t const *t2, unsigned dim);
+
     using std::vector;
     using std::runtime_error;
     namespace metric {
@@ -214,7 +215,7 @@ namespace kgraph {
 namespace kgraph { namespace metric {
         template <>
         static float l2sqr::apply<float> (float const *t1, float const *t2, unsigned dim) {
-            return kgraph_float_l2sqr_avx(t1, t2, dim);
+            return float_l2sqr_avx(t1, t2, dim);
         }
 }}
 #else
@@ -222,11 +223,11 @@ namespace kgraph { namespace metric {
 namespace kgraph { namespace metric {
         template <>
         inline float l2sqr::apply<float> (float const *t1, float const *t2, unsigned dim) {
-            return kgraph_float_l2sqr_sse2(t1, t2, dim);
+            return float_l2sqr_sse2(t1, t2, dim);
         }
         template <>
         inline float l2sqr::apply<uint8_t> (uint8_t const *t1, uint8_t const *t2, unsigned dim) {
-            return kgraph_uint8_l2sqr_sse2(t1, t2, dim);
+            return uint8_l2sqr_sse2(t1, t2, dim);
         }
 }}
 #endif

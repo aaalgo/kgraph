@@ -126,7 +126,7 @@ int main (int argc, char *argv[]) {
         if (init_path.size()) {
             params.init = true;
         }
-        KGraph *kgraph = KGraph::make();
+        KGraph *kgraph = KGraph::create();
         kgraph->load(index_path.c_str());
         boost::timer::auto_cpu_timer timer;
         cerr << "Searching..." << endl;

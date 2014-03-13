@@ -71,10 +71,10 @@ namespace kgraph {
             float recall;
             float accuracy;
             float delta;
+            float M;
         };
 
         struct SearchInfo {
-            unsigned N;
             float cost;
             unsigned updates;
         };
@@ -85,7 +85,7 @@ namespace kgraph {
         virtual void save (char const *path) = 0; // save to file
         virtual void build (IndexOracle const &oracle, IndexParams const &params, IndexInfo *info) = 0;
         virtual unsigned search (SearchOracle const &oracle, SearchParams const &params, unsigned *ids, SearchInfo *info) = 0;
-        static KGraph *make ();
+        static KGraph *create ();
     };
 }
 

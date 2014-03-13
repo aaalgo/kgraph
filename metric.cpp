@@ -10,7 +10,8 @@
     tmp1 = _mm256_sub_ps(tmp1, tmp2); \
     tmp1 = _mm256_mul_ps(tmp1, tmp1); \
     dest = _mm256_add_ps(dest, tmp1); 
-float kgraph_float_l2sqr_avx (float const *t1, float const *t2, unsigned dim) {
+namespace kgraph {
+float float_l2sqr_avx (float const *t1, float const *t2, unsigned dim) {
     __m256 sum;
     __m256 l0, l1, l2, l3;
     __m256 r0, r1, r2, r3;
@@ -43,6 +44,7 @@ float kgraph_float_l2sqr_avx (float const *t1, float const *t2, unsigned dim) {
         + unpack[4] + unpack[5] + unpack[6] + unpack[7];
     return ret;//sqrt(ret);
 }
+}
 #endif
 #ifdef __SSE2__
 #include <xmmintrin.h>
@@ -52,7 +54,8 @@ float kgraph_float_l2sqr_avx (float const *t1, float const *t2, unsigned dim) {
     tmp1 = _mm_sub_ps(tmp1, tmp2); \
     tmp1 = _mm_mul_ps(tmp1, tmp1); \
     dest = _mm_add_ps(dest, tmp1); 
-float kgraph_float_l2sqr_sse2 (float const *t1, float const *t2, unsigned dim) {
+namespace kgraph {
+float float_l2sqr_sse2 (float const *t1, float const *t2, unsigned dim) {
     __m128 sum;
     __m128 l0, l1, l2, l3;
     __m128 r0, r1, r2, r3;
@@ -84,6 +87,7 @@ float kgraph_float_l2sqr_sse2 (float const *t1, float const *t2, unsigned dim) {
     ret = unpack[0] + unpack[1] + unpack[2] + unpack[3];
     return ret;//sqrt(ret);
 }
+}
 /*
 template <typename T>
 void print_128 (__m128i v) {
@@ -111,7 +115,8 @@ void print_128 (__m128i v) {
         d = _mm_sub_epi16(o1, p1); \
         sum = _mm_add_epi32(sum, _mm_madd_epi16(d, d)); \
     } while (false)
-float kgraph_uint8_l2sqr_sse2 (uint8_t const *t1, uint8_t const *t2, unsigned dim) {
+namespace kgraph {
+float uint8_l2sqr_sse2 (uint8_t const *t1, uint8_t const *t2, unsigned dim) {
     unsigned D = (dim + 0xFU) & ~0xFU;   // actual dimension used in calculation, 0-padded
     unsigned DR = D % 64;           // process 32 dims per iteration
     unsigned DD = D - DR;
@@ -139,6 +144,7 @@ float kgraph_uint8_l2sqr_sse2 (uint8_t const *t1, uint8_t const *t2, unsigned di
     _mm_store_si128((__m128i *)unpack, sum);
     int32_t ret = unpack[0] + unpack[1] + unpack[2] + unpack[3];
     return float(ret);//sqrt(ret);
+}
 }
 #endif
 #endif

@@ -565,13 +565,14 @@ public:
                     info.delta = mean(delta);
                     info.recall = mean(recall);
                     info.accuracy = mean(accuracy);
+                    info.M = mean(M);
                     auto times = timer.elapsed();
                     if (verbosity > 0) {
                         cerr << "iteration: " << info.iterations
                              << " recall: " << info.recall
                              << " accuracy: " << info.accuracy
                              << " cost: " << info.cost
-                             << " M: " << mean(M)
+                             << " M: " << info.M
                              << " delta: " << info.delta
                              << " time: " << times.wall / 1e9
                              << " one-recall: " << mean(one_recall)
@@ -609,7 +610,7 @@ public:
         graph.swap(con.graph);
     }
 
-    KGraph *KGraph::make () {
+    KGraph *KGraph::create () {
         return new KGraphImpl;
     }
 }

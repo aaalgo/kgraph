@@ -153,7 +153,7 @@ int main (int argc, char *argv[]) {
 
     MatrixOracle<value_type, metric::l2sqr> oracle(data);
     KGraph::IndexInfo info;
-    KGraph *kgraph = KGraph::make(); //(oracle, params, &info);
+    KGraph *kgraph = KGraph::create(); //(oracle, params, &info);
     {
         auto_cpu_timer timer;
         kgraph->build(oracle, params, &info);
