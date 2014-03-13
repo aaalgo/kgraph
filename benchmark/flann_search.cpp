@@ -34,7 +34,7 @@ int main (int argc, char *argv[]) {
     ("query", po::value(&query_path), "query path")
     ("output", po::value(&output_path), "output_path")
     ("eval", po::value(&eval_path), "eval path")
-    (",K", po::value(&K)->default_value(20), "")
+    (",K", po::value(&K)->default_value(10), "")
     ("checks,C", po::value(&params.checks), "")
     ("eps", po::value(&params.eps), "")
     ;
@@ -72,7 +72,6 @@ int main (int argc, char *argv[]) {
     flann::Matrix<int> fresult(reinterpret_cast<int *>(result[0]), query.size(), K);
     flann::Matrix<float> fdists(dists[0], query.size(), K);
 
-
     boost::timer::auto_cpu_timer timer;
     cerr << "Loading..." << endl;
     flann::Index<flann::L2<float>> index(fdata, flann::SavedIndexParams(index_path));
@@ -82,15 +81,18 @@ int main (int argc, char *argv[]) {
     cerr << "Searching..." << endl;
     index.knnSearch(fquery, fresult, fdists, K, params);
     timer.stop();
+    float time = timer.elapsed().wall / 1e9;
     timer.report();
     if (output_path.size()) {
         result.save_lshkit(output_path);
     }
+    float recall = 0;
     if (eval_path.size()) {
         kgraph::IndexMatrix gs;
         gs.load_lshkit(eval_path);
-        cerr << "Recall: " << kgraph::AverageRecall(gs, result, K) << endl;
+        recall = kgraph::AverageRecall(gs, result, K);
     }
+    cout << "Time: " << time << " Recall: " << recall << endl;
     return 0;
 }
 

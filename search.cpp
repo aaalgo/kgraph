@@ -85,6 +85,9 @@ int main (int argc, char *argv[]) {
         BOOST_VERIFY(init >= K);
     }
     MatrixOracle<value_type, metric::l2sqr> oracle(data);
+    float recall = 0;
+    float cost = 0;
+    float time = 0;
     if (vm.count("linear")) {
         boost::timer::auto_cpu_timer timer;
         result.resize(query.size(), K);
@@ -92,6 +95,8 @@ int main (int argc, char *argv[]) {
         for (unsigned i = 0; i < query.size(); ++i) {
             oracle.query(query[i]).search(K, default_epsilon, result[i]);
         }
+        cost = 1.0;
+        time = timer.elapsed().wall / 1e9;
     }
     else {
         result.resize(query.size(), K);
@@ -104,7 +109,6 @@ int main (int argc, char *argv[]) {
         boost::timer::auto_cpu_timer timer;
         cerr << "Searching..." << endl;
 
-        float cost = 0;
 #pragma omp parallel for reduction(+:cost)
         for (unsigned i = 0; i < query.size(); ++i) {
             KGraph::SearchInfo info;
@@ -112,7 +116,8 @@ int main (int argc, char *argv[]) {
             cost += info.cost;
         }
         cost /= query.size();
-        cerr << "Cost: " << cost << endl;
+        time = timer.elapsed().wall / 1e9;
+        //cerr << "Cost: " << cost << endl;
         delete kgraph;
     }
     if (output_path.size()) {
@@ -121,8 +126,9 @@ int main (int argc, char *argv[]) {
     if (eval_path.size()) {
         IndexMatrix gs;
         gs.load_lshkit(eval_path);
-        cerr << "Recall: " << AverageRecall(gs, result, K) << endl;
+        recall = AverageRecall(gs, result, K);
     }
+    cout << "Time: " << time << " Recall: " << recall << " Cost: " << cost << endl;
 
     return 0;
 }

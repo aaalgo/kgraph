@@ -262,6 +262,12 @@ namespace kgraph {
         virtual void build (IndexOracle const &oracle, IndexParams const &param, IndexInfo *info);
 
         virtual void prune (unsigned K) {
+            for (auto &v: graph) {
+                if (v.size() > K) {
+                    v.resize(K);
+                }
+            }
+            return;
             vector<vector<unsigned>> pruned(graph.size());
             vector<set<unsigned>> reachable(graph.size());
             vector<bool> added(graph.size());
@@ -633,8 +639,8 @@ public:
             for (unsigned n = 0; n < N; ++n) {
                 auto &knn = graph[n];
                 auto const &pool = nhoods[n].pool;
-                knn.resize(params.K);
-                for (unsigned k = 0; k < params.K; ++k) {
+                knn.resize(params.L);
+                for (unsigned k = 0; k < params.L; ++k) {
                     knn[k] = pool[k].id;
                 }
             }
