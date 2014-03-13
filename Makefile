@@ -24,6 +24,8 @@ release:	libkgraph.so
 	mkdir release
 	cp kgraph.h kgraph-data.h libkgraph.so index.cpp search.cpp release
 	cp Makefile.sdk release/Makefile
+	mkdir release/benchmark
+	cp benchmark/flann_index.cpp benchmark/flann_search.cpp benchmark/split.cpp benchmark/lshkit2fvec.cpp benchmark/fvec2lshkit.cpp benchmark/Makefile release/benchmark
 
 benchmark:
 	make -C benchmark
