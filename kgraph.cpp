@@ -1,4 +1,5 @@
 #include <omp.h>
+#include <set>
 #include <mutex>
 #include <iostream>
 #include <fstream>
@@ -125,7 +126,7 @@ namespace kgraph {
     // Special case:  K == 0
     //      addr[0] <- nn
     //      return 0
-    static inline unsigned  __attribute__ ((noinline)) UpdateKnnList (Neighbor *addr, unsigned K, Neighbor nn) {
+    static inline unsigned UpdateKnnList (Neighbor *addr, unsigned K, Neighbor nn) {
         // find the location to insert
         unsigned j;
         unsigned i = K;
@@ -259,6 +260,44 @@ namespace kgraph {
         }
 
         virtual void build (IndexOracle const &oracle, IndexParams const &param, IndexInfo *info);
+
+        virtual void prune (unsigned K) {
+            vector<vector<unsigned>> pruned(graph.size());
+            vector<set<unsigned>> reachable(graph.size());
+            vector<bool> added(graph.size());
+            for (unsigned k = 0; k < K; ++k) {
+#pragma omp parallel for
+                for (unsigned n = 0; n < graph.size(); ++n) {
+                    vector<unsigned> const &from = graph[n];
+                    if (from.size() <= k) continue;
+                    unsigned e = from[k];
+                    if (reachable[n].count(e)) {
+                        added[n] = false;
+                    }
+                    else {
+                        pruned[n].push_back(e);
+                        added[n] = true;
+                    }
+                }
+                // expand reachable
+#pragma omp parallel for
+                for (unsigned n = 0; n < graph.size(); ++n) {
+                    vector<unsigned> const &to = pruned[n];
+                    set<unsigned> &nn = reachable[n];
+                    if (added[n]) {
+                        for (unsigned v: pruned[to.back()]) {
+                            nn.insert(v);
+                        }
+                    }
+                    for (unsigned v: to) {
+                        if (added[v]) {
+                            nn.insert(pruned[v].back());
+                        }
+                    }
+                }
+            }
+            graph.swap(pruned);
+        }
 
         virtual unsigned search (SearchOracle const &oracle, SearchParams const &params, unsigned *ids, SearchInfo *pinfo) {
             if (graph.size() > oracle.size()) {

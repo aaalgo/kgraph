@@ -24,34 +24,6 @@ namespace po = boost::program_options;
 
 typedef KGRAPH_VALUE_TYPE value_type;
 
-typedef Matrix<unsigned> IndexMatrix;
-float AverageRecall (IndexMatrix const &eval, IndexMatrix const &result, unsigned K = 0) {
-    if (K == 0) {
-        K = result.dim();
-    }
-    BOOST_VERIFY(eval.dim() >= K);
-    BOOST_VERIFY(result.dim() >= K);
-    BOOST_VERIFY(eval.size() >= result.size());
-    float sum = 0;
-    for (unsigned i = 0; i < result.size(); ++i) {
-        unsigned const *gs = eval[i];
-        unsigned const *re = result[i];
-        // compare
-        unsigned found = 0;
-        for (unsigned j = 0; j < K; ++j) {
-            for (unsigned k = 0; k < K; ++k) {
-                if (gs[j] == re[k]) {
-                    ++found;
-                    break;
-                }
-            }
-        }
-        sum += float(found) / K;
-    }
-    return sum / result.size();
-}
-
-
 int main (int argc, char *argv[]) {
     vector<string> params;
     string input_path;
@@ -60,7 +32,7 @@ int main (int argc, char *argv[]) {
     string output_path;
     string init_path;
     string eval_path;
-    unsigned K, U;
+    unsigned K, M;
 
     po::options_description desc_visible("General options");
     desc_visible.add_options()
@@ -71,8 +43,8 @@ int main (int argc, char *argv[]) {
     ("output", po::value(&output_path), "output path")
     ("init", po::value(&init_path), "init path")
     ("eval", po::value(&eval_path), "eval path")
-    (",K", po::value(&K)->default_value(20), "")
-    (",U", po::value(&U)->default_value(100), "")
+    (",K", po::value(&K)->default_value(default_K), "")
+    (",M", po::value(&M)->default_value(default_M), "")
     ("linear", "")
     ;
 
@@ -95,20 +67,22 @@ int main (int argc, char *argv[]) {
         return 0;
     }
 
-    if (U < K) {
-        U = K;
+    if (M < K) {
+        M = K;
     }
 
     Matrix<value_type> data;
     Matrix<value_type> query;
     IndexMatrix result; //(query.size(), U);
+    unsigned init = 0;
 
     data.load_lshkit(input_path);
     query.load_lshkit(query_path);
     if (init_path.size()) {
         result.load_lshkit(init_path);
         BOOST_VERIFY(result.size() == query.size());
-        BOOST_VERIFY(result.dim() == U);
+        init = result.dim();
+        BOOST_VERIFY(init >= K);
     }
     MatrixOracle<value_type, metric::l2sqr> oracle(data);
     if (vm.count("linear")) {
@@ -120,12 +94,11 @@ int main (int argc, char *argv[]) {
         }
     }
     else {
-        result.resize(query.size(), U);
+        result.resize(query.size(), K);
         KGraph::SearchParams params;
-        params.K = U;
-        if (init_path.size()) {
-            params.init = true;
-        }
+        params.K = K;
+        params.M = M;
+        params.init = init;
         KGraph *kgraph = KGraph::create();
         kgraph->load(index_path.c_str());
         boost::timer::auto_cpu_timer timer;

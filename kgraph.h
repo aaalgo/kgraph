@@ -84,6 +84,7 @@ namespace kgraph {
         virtual void load (char const *path) = 0;
         virtual void save (char const *path) = 0; // save to file
         virtual void build (IndexOracle const &oracle, IndexParams const &params, IndexInfo *info) = 0;
+        virtual void prune (unsigned K) = 0;
         virtual unsigned search (SearchOracle const &oracle, SearchParams const &params, unsigned *ids, SearchInfo *info) = 0;
         static KGraph *create ();
     };

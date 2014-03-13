@@ -208,13 +208,42 @@ namespace kgraph {
             return SearchOracle(proxy, query);
         }
     };
+
+    typedef Matrix<unsigned> IndexMatrix;
+    inline float AverageRecall (IndexMatrix const &eval, IndexMatrix const &result, unsigned K = 0) {
+        if (K == 0) {
+            K = result.dim();
+        }
+        BOOST_VERIFY(eval.dim() >= K);
+        BOOST_VERIFY(result.dim() >= K);
+        BOOST_VERIFY(eval.size() >= result.size());
+        float sum = 0;
+        for (unsigned i = 0; i < result.size(); ++i) {
+            unsigned const *gs = eval[i];
+            unsigned const *re = result[i];
+            // compare
+            unsigned found = 0;
+            for (unsigned j = 0; j < K; ++j) {
+                for (unsigned k = 0; k < K; ++k) {
+                    if (gs[j] == re[k]) {
+                        ++found;
+                        break;
+                    }
+                }
+            }
+            sum += float(found) / K;
+        }
+        return sum / result.size();
+    }
+
+
 }
 
 #ifdef __GNUC__
 #ifdef __AVX__
 namespace kgraph { namespace metric {
         template <>
-        static float l2sqr::apply<float> (float const *t1, float const *t2, unsigned dim) {
+        inline float l2sqr::apply<float> (float const *t1, float const *t2, unsigned dim) {
             return float_l2sqr_avx(t1, t2, dim);
         }
 }}
