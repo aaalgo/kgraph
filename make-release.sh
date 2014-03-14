@@ -1,6 +1,6 @@
 #!/bin/bash
 
 vagrant up
-vagrant ssh /vagrant/make-release-vagrant.sh
+vagrant ssh -c /vagrant/make-release-vagrant.sh
 vagrant halt
 
