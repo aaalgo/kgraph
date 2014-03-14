@@ -19,13 +19,16 @@ PROGS = index search #prune #stat
 
 all:	libkgraph.so $(PROGS)
 
+RELEASE=kgraph-1.0-x86_64
+
 release:	libkgraph.so
-	rm -rf release
-	mkdir release
-	cp kgraph.h kgraph-data.h libkgraph.so index.cpp search.cpp release
-	cp Makefile.sdk release/Makefile
-	mkdir release/benchmark
-	cp benchmark/flann_index.cpp benchmark/flann_search.cpp benchmark/split.cpp benchmark/lshkit2fvec.cpp benchmark/fvec2lshkit.cpp benchmark/Makefile release/benchmark
+	rm -rf $(RELEASE)
+	mkdir $(RELEASE)
+	cp kgraph.h kgraph-data.h libkgraph.so index.cpp search.cpp $(RELEASE)
+	cp Makefile.sdk $(RELEASE)/Makefile
+	mkdir $(RELEASE)/benchmark
+	cp benchmark/flann_index.cpp benchmark/flann_search.cpp benchmark/split.cpp benchmark/lshkit2fvec.cpp benchmark/fvec2lshkit.cpp benchmark/Makefile $(RELEASE)/benchmark
+	tar zcf $(RELEASE).tar.gz $(RELEASE)
 
 benchmark:
 	make -C benchmark
