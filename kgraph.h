@@ -16,6 +16,7 @@ namespace kgraph {
     static float const default_recall = 0.98;
     static float const default_epsilon = 1e30;
     static unsigned const default_verbosity = 1;
+    static unsigned const default_prune = 0;
 
     extern unsigned verbosity;
 
@@ -44,8 +45,9 @@ namespace kgraph {
             unsigned seed;
             float delta;
             float recall;
+            unsigned prune;
 
-            IndexParams (): iterations(default_iterations), L(default_L), K(default_K), S(default_S), R(default_R), controls(default_controls), seed(default_seed), delta(default_delta), recall(default_recall) {
+            IndexParams (): iterations(default_iterations), L(default_L), K(default_K), S(default_S), R(default_R), controls(default_controls), seed(default_seed), delta(default_delta), recall(default_recall), prune(default_prune) {
             }
         };
 

@@ -651,12 +651,17 @@ public:
             }
             M.resize(N);
             graph.resize(N);
+            if (params.prune > 1) throw runtime_error("prune level not supported.");
             for (unsigned n = 0; n < N; ++n) {
                 auto &knn = graph[n];
                 M[n] = nhoods[n].M;
                 auto const &pool = nhoods[n].pool;
-                knn.resize(params.L);
-                for (unsigned k = 0; k < params.L; ++k) {
+                unsigned K = params.L;
+                if (params.prune == 1) {
+                    K = M[n];
+                }
+                knn.resize(K);
+                for (unsigned k = 0; k < K; ++k) {
                     knn[k] = pool[k].id;
                 }
             }
