@@ -5,15 +5,21 @@ OPENMP = -fopenmp
 CXXFLAGS += -Wall -g -std=c++11 -I. $(OPENMP) $(OPT) $(ARCH)
 LDFLAGS += $(OPENMP) 
 LDLIBS += -lboost_timer -lboost_chrono -lboost_system -lboost_program_options -lm -lrt
+FLANN_LIBS+=-lflann_cpp_s -lflann_s
 
-.PHONY:	benchmark all clean release
+.PHONY:	all clean
 
-PROGS = index search
+PROGS=index search split fvec2lshkit
+FLANN_PROGS=flann_index flann_search
 
-all:	$(PROGS)
+
+all:	$(PROGS) $(FLANN_PROGS)
 
 $(PROGS):	%:	%.cpp 
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $*.cpp libkgraph.so $(LDLIBS)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $*.cpp bin/libkgraph.so $(LDLIBS)
+
+$(FLANN_PROGS):	%:	%.cpp 
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $*.cpp bin/libkgraph.so $(FLANN_LIBS) $(LDLIBS)
 
 %.o:	%.cpp $(HEADERS)
 	$(CXX) $(CXXFLAGS) -c $*.cpp 

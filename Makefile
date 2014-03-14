@@ -1,42 +1,39 @@
 CC=g++ 
+ARCH=-msse2
+OPT=-O3 
+OPENMP=-fopenmp
+CXXFLAGS+=-fPIC -Wall -g -std=c++11 -I. $(OPENMP) $(OPT) $(ARCH) 
+LDFLAGS+=-static $(OPENMP)
+LDLIBS+=-lboost_timer -lboost_chrono -lboost_system -lboost_program_options -lm -lrt
+FLANN_LIBS+=-lflann_cpp_s -lflann_s
 
-ARCH = -msse2
-ARCH = #-march=corei7-avx
-#OPT = -O3 -fprofile-arcs
-OPT = -O3 
-OPENMP = -fopenmp
-CXXFLAGS += -fPIC -Wall -g -std=c++11 -I. $(OPENMP) $(OPT) $(ARCH) 
-LDFLAGS += $(OPENMP) -static
-#CXXFLAGS += -std=c++11 -g  -Wall -static -I. -msse2
-#LDLIBS += -lopencv_flann -lopencv_core -lboost_timer -lboost_chrono -lboost_system -lboost_program_options  -lpthread -lm -lz
-LDLIBS += -lboost_timer -lboost_chrono -lboost_system -lboost_program_options -lm -lrt
+.PHONY:	all clean release
 
-.PHONY:	benchmark all clean release
+COMMON=kgraph.o metric.o
+HEADERS=kgraph.h kgraph-data.h 
+PROGS=index search split fvec2lshkit
+FLANN_PROGS=flann_index flann_search
 
-COMMON = kgraph.o metric.o
-HEADERS = kgraph.h kgraph-data.h 
-PROGS = index search 
-
-all:	libkgraph.so $(PROGS)
+all:	libkgraph.so $(PROGS) $(FLANN_PROGS)
 
 RELEASE=kgraph-1.0-x86_64
+RELEASE_SRC=Makefile kgraph.h kgraph-data.h index.cpp search.cpp flann_index.cpp flann_search.cpp split.cpp fvec2lshkit.cpp
+RELEASE_BIN=libkgraph.so $(PROGS) $(FLANN_PROGS)
 
-release:	libkgraph.so $(PROGS) benchmark
+release:	all
 	rm -rf $(RELEASE)
 	mkdir $(RELEASE)
-	cp kgraph.h kgraph-data.h libkgraph.so index.cpp search.cpp $(RELEASE)
+	cp $(RELEASE_SRC) $(RELEASE)
 	cp Makefile.sdk $(RELEASE)/Makefile
-	mkdir $(RELEASE)/benchmark
-	cp benchmark/flann_index.cpp benchmark/flann_search.cpp benchmark/split.cpp benchmark/lshkit2fvec.cpp benchmark/fvec2lshkit.cpp benchmark/Makefile $(RELEASE)/benchmark
 	mkdir $(RELEASE)/bin
-	cp index search benchmark/flann_index benchmark/flann_search benchmark/split benchmark/lshkit2fvec benchmark/fvec2lshkit $(RELEASE)/bin
+	cp $(RELEASE_BIN) $(RELEASE)/bin
 	tar zcf $(RELEASE).tar.gz $(RELEASE)
-
-benchmark:
-	make -C benchmark
 
 $(PROGS):	%:	%.cpp $(HEADERS) $(COMMON)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $*.cpp $(COMMON) $(LDLIBS)
+
+$(FLANN_PROGS):	%:	%.cpp $(HEADERS) $(COMMON)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $*.cpp $(COMMON) $(FLANN_LIBS) $(LDLIBS)
 
 libkgraph.so:	$(COMMON)
 	$(CXX) -shared -o $@ $^ $(LDLIBS)
