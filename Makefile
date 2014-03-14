@@ -16,7 +16,7 @@ FLANN_PROGS=flann_index flann_search
 
 all:	libkgraph.so $(PROGS) $(FLANN_PROGS)
 
-RELEASE=kgraph-1.0-x86_64
+RELEASE=kgraph-1.1-x86_64
 RELEASE_SRC=Makefile kgraph.h kgraph-data.h index.cpp search.cpp flann_index.cpp flann_search.cpp split.cpp fvec2lshkit.cpp
 RELEASE_BIN=libkgraph.so $(PROGS) $(FLANN_PROGS)
 

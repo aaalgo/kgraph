@@ -249,7 +249,7 @@ namespace kgraph {
             }
         }
 
-        virtual void save (char const *path) {
+        virtual void save (char const *path) const {
             uint32_t N = graph.size();
             ofstream os(path, ios::binary);
             os.write(KGRAPH_MAGIC, KGRAPH_MAGIC_SIZE);
@@ -313,7 +313,7 @@ namespace kgraph {
         }
         */
 
-        virtual unsigned search (SearchOracle const &oracle, SearchParams const &params, unsigned *ids, SearchInfo *pinfo) {
+        virtual unsigned search (SearchOracle const &oracle, SearchParams const &params, unsigned *ids, SearchInfo *pinfo) const {
             if (graph.size() > oracle.size()) {
                 throw runtime_error("dataset larger than index");
             }
@@ -390,6 +390,14 @@ namespace kgraph {
                 pinfo->cost = float(n_comps) / graph.size();
             }
             return L;
+        }
+
+        virtual void get_nn (unsigned id, unsigned *nns, unsigned *pM, unsigned *pL) const {
+            BOOST_VERIFY(id < graph.size());
+            auto const &v = graph[id];
+            *pM = M[id];
+            *pL = v.size();
+            copy(v.begin(), v.end(), nns);
         }
     };
 
