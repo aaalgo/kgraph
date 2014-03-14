@@ -16,7 +16,7 @@ FLANN_PROGS=flann_index flann_search
 
 all:	libkgraph.so $(PROGS) $(FLANN_PROGS)
 
-RELEASE=kgraph-1.1-x86_64
+RELEASE=kgraph-release
 RELEASE_SRC=Makefile kgraph.h kgraph-data.h index.cpp search.cpp flann_index.cpp flann_search.cpp split.cpp fvec2lshkit.cpp
 RELEASE_BIN=libkgraph.so $(PROGS) $(FLANN_PROGS)
 
@@ -27,7 +27,7 @@ release:	all
 	cp Makefile.sdk $(RELEASE)/Makefile
 	mkdir $(RELEASE)/bin
 	cp $(RELEASE_BIN) $(RELEASE)/bin
-	tar zcf $(RELEASE).tar.gz $(RELEASE)
+	#tar zcf $(RELEASE).tar.gz $(RELEASE)
 
 $(PROGS):	%:	%.cpp $(HEADERS) $(COMMON)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $*.cpp $(COMMON) $(LDLIBS)
