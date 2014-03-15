@@ -1,6 +1,6 @@
 CC=g++ 
 ARCH=-msse2
-OPT=-O3 
+OPT=-O3
 OPENMP=-fopenmp
 CXXFLAGS+=-fPIC -Wall -g -std=c++11 -I. $(OPENMP) $(OPT) $(ARCH) 
 LDFLAGS+=-static $(OPENMP)
@@ -12,7 +12,7 @@ NABO_LIBS+=-lnabo
 
 COMMON=kgraph.o metric.o
 HEADERS=kgraph.h kgraph-data.h 
-PROGS=index search split fvec2lshkit 
+PROGS=index search split fvec2lshkit  cpp11search  cpp11xx
 FLANN_PROGS=flann_index flann_search
 NABO_PROGS=nabo_search
 

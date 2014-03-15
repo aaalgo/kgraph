@@ -233,7 +233,9 @@ namespace kgraph {
                     ++gs_n;
                     ++re_n;
                 }
-                else throw runtime_error("distance is unstable");
+                else {
+                    throw runtime_error("distance is unstable");
+                }
             }
             sum += float(found) / K;
         }

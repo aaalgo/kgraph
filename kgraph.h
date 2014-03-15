@@ -105,7 +105,7 @@ namespace kgraph {
     public:
         class VectorSearchOracle: public SearchOracle {
             CONTAINER_TYPE const &data;
-            OBJECT_TYPE const &query;
+            OBJECT_TYPE const query;
             METRIC_TYPE dist;
         public:
             VectorSearchOracle (CONTAINER_TYPE const &p, OBJECT_TYPE const &q, METRIC_TYPE m): data(p), query(q), dist(m) {
@@ -125,8 +125,8 @@ namespace kgraph {
         virtual float operator () (unsigned i, unsigned j) const {
             return dist(data[i], data[j]);
         }
-        VectorSearchOracle query (OBJECT_TYPE const &query) const {
-            return VectorSearchOracle(data, query, dist);
+        VectorSearchOracle query (OBJECT_TYPE const &q) const {
+            return VectorSearchOracle(data, q, dist);
         }
     };
 }
