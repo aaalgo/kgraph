@@ -13,6 +13,7 @@ NABO_LIBS+=-lnabo
 COMMON=kgraph.o metric.o
 HEADERS=kgraph.h kgraph-data.h 
 PROGS=index search split fvec2lshkit 
+EXTRA_PROGS=test.cpp
 FLANN_PROGS=flann_index flann_search
 NABO_PROGS=nabo_search
 
@@ -31,7 +32,7 @@ release:	all
 	cp $(RELEASE_BIN) $(RELEASE)/bin
 	#tar zcf $(RELEASE).tar.gz $(RELEASE)
 
-$(PROGS):	%:	%.cpp $(HEADERS) $(COMMON)
+$(PROGS) $(EXTRA_PROGS):	%:	%.cpp $(HEADERS) $(COMMON)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $*.cpp $(COMMON) $(LDLIBS)
 
 $(FLANN_PROGS):	%:	%.cpp $(HEADERS) $(COMMON)
