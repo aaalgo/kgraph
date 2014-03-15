@@ -8,7 +8,6 @@
 #define KGRAPH_VALUE_TYPE float
 #endif
 
-
 #include <cctype>
 #include <type_traits>
 #include <iostream>
@@ -71,7 +70,14 @@ int main (int argc, char *argv[]) {
     unsigned dim = data.dim();
     VectorOracle<Matrix<value_type>, value_type const*> oracle(data,
             [dim](value_type const *a, value_type const *b)
-            {return metric::l2sqr::apply<value_type>(a, b, dim);});
+            {
+                float r = 0;
+                for (unsigned i = 0; i < dim; ++i) {
+                    float v = float(a[i]) - (b[i]);
+                    r += v * v;
+                }
+                return r;
+            });
     float recall = 0;
     float cost = 0;
     float time = 0;
@@ -83,8 +89,7 @@ int main (int argc, char *argv[]) {
     KGraph *kgraph = KGraph::create();
     {
         KGraph::IndexParams params;
-        //kgraph->build(oracle, params, NULL);
-        kgraph->load("sift.kgraph");
+        kgraph->build(oracle, params, NULL);
     }
 
     boost::timer::auto_cpu_timer timer;
