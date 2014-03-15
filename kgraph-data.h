@@ -243,6 +243,7 @@ namespace kgraph {
 
 }
 
+#ifndef KGRAPH_NO_VECTORIZE
 #ifdef __GNUC__
 #ifdef __AVX__
 namespace kgraph { namespace metric {
@@ -263,6 +264,7 @@ namespace kgraph { namespace metric {
             return uint8_l2sqr_sse2(t1, t2, dim);
         }
 }}
+#endif
 #endif
 #endif
 #endif

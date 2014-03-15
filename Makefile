@@ -6,13 +6,15 @@ CXXFLAGS+=-fPIC -Wall -g -std=c++11 -I. $(OPENMP) $(OPT) $(ARCH)
 LDFLAGS+=-static $(OPENMP)
 LDLIBS+=-lboost_timer -lboost_chrono -lboost_system -lboost_program_options -lm -lrt
 FLANN_LIBS+=-lflann_cpp_s -lflann_s
+NABO_LIBS+=-lnabo
 
 .PHONY:	all clean release
 
 COMMON=kgraph.o metric.o
 HEADERS=kgraph.h kgraph-data.h 
-PROGS=index search split fvec2lshkit
+PROGS=index search split fvec2lshkit delta
 FLANN_PROGS=flann_index flann_search
+NABO_PROGS=nabo_search
 
 all:	libkgraph.so $(PROGS) $(FLANN_PROGS)
 
@@ -34,6 +36,9 @@ $(PROGS):	%:	%.cpp $(HEADERS) $(COMMON)
 
 $(FLANN_PROGS):	%:	%.cpp $(HEADERS) $(COMMON)
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $*.cpp $(COMMON) $(FLANN_LIBS) $(LDLIBS)
+
+$(NABO_PROGS):	%:	%.cpp $(HEADERS) $(COMMON)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $*.cpp $(COMMON) $(NABO_LIBS) $(LDLIBS)
 
 libkgraph.so:	$(COMMON)
 	$(CXX) -shared -o $@ $^ $(LDLIBS)

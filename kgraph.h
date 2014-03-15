@@ -92,5 +92,45 @@ namespace kgraph {
     };
 }
 
+#if __cplusplus > 199711L
+#include <functional>
+namespace kgraph {
+    template <typename CONTAINER_TYPE, typename OBJECT_TYPE>
+    class VectorOracle: public IndexOracle {
+    public:
+        typedef std::function<float(OBJECT_TYPE const &, OBJECT_TYPE const &)> METRIC_TYPE;
+    private:
+        CONTAINER_TYPE const &data;
+        METRIC_TYPE dist;
+    public:
+        class VectorSearchOracle: public SearchOracle {
+            CONTAINER_TYPE const &data;
+            OBJECT_TYPE const &query;
+            METRIC_TYPE dist;
+        public:
+            VectorSearchOracle (CONTAINER_TYPE const &p, OBJECT_TYPE const &q, METRIC_TYPE m): data(p), query(q), dist(m) {
+            }
+            virtual unsigned size () const {
+                return data.size();
+            }
+            virtual float operator () (unsigned i) const {
+                return dist(data[i], query);
+            }
+        };
+        VectorOracle (CONTAINER_TYPE const &d, METRIC_TYPE m): data(d), dist(m) {
+        }
+        virtual unsigned size () const {
+            return data.size();
+        }
+        virtual float operator () (unsigned i, unsigned j) const {
+            return dist(data[i], data[j]);
+        }
+        VectorSearchOracle query (OBJECT_TYPE const &query) const {
+            return VectorSearchOracle(data, query, dist);
+        }
+    };
+}
+#endif
+
 #endif
 
