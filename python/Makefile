@@ -1,7 +1,7 @@
 PYTHON_VERSION = 2.7
 PYTHON_INCLUDE = /usr/include/python$(PYTHON_VERSION)
 CXXFLAGS = -g -fPIC -std=c++11 -I$(PYTHON_INCLUDE) -I..
-LDFLAGS = 
+LDFLAGS = -L../bin
 LDLIBS = -lkgraph -lboost_python -lpython$(PYTHON_VERSION)
 
 .PHONY:	clean
