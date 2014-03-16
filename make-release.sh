@@ -9,6 +9,6 @@ then
     exit
 fi
 
-scp kgraph-1.1-x86_64.tar.gz cloud:/var/www/kgraph/releases
+#scp kgraph-1.1-x86_64.tar.gz cloud:/var/www/kgraph/releases
 
 

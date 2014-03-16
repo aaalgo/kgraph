@@ -142,7 +142,7 @@ namespace kgraph {
         }
     };
 
-    template <typename DATA_TYPE>
+    template <typename DATA_TYPE, unsigned A = KGRAPH_MATRIX_ALIGN>
     class MatrixProxy {
         unsigned rows;
         unsigned cols;      // # elements, not bytes, in a row, 
@@ -157,13 +157,26 @@ namespace kgraph {
 #ifdef FLANN_DATASET_H_
         MatrixProxy (flann::Matrix<DATA_TYPE> const &m)
             : rows(m.rows), cols(m.cols), stride(m.stride), data(m.data) {
-            BOOST_VERIFY(stride % KGRAPH_MATRIX_ALIGN == 0);
+            BOOST_VERIFY(stride % A == 0);
         }
 #endif
 #ifdef __OPENCV_CORE_HPP__
         MatrixProxy (cv::Mat const &m)
             : rows(m.rows), cols(m.cols), stride(m.step), data(m.data) {
-            BOOST_VERIFY(stride % KGRAPH_MATRIX_ALIGN == 0);
+            BOOST_VERIFY(stride % A == 0);
+        }
+#endif
+#ifdef NPY_NDARRAYOBJECT_H
+        MatrixProxy (PyArrayObject *obj) {
+            BOOST_VERIFY(obj->nd == 2);
+            rows = obj->dimensions[0];
+            cols = obj->dimensions[1];
+            stride = obj->strides[0];
+            data = reinterpret_cast<uint8_t const *>(obj->data);
+            BOOST_VERIFY(obj->descr->elsize == sizeof(DATA_TYPE));
+            BOOST_VERIFY(stride % A == 0);
+            BOOST_VERIFY(obj->descr->alignment % A == 0);
+            BOOST_VERIFY(stride >= cols * sizeof(DATA_TYPE));
         }
 #endif
 #endif
