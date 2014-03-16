@@ -175,7 +175,6 @@ namespace kgraph {
             data = reinterpret_cast<uint8_t const *>(obj->data);
             BOOST_VERIFY(obj->descr->elsize == sizeof(DATA_TYPE));
             BOOST_VERIFY(stride % A == 0);
-            BOOST_VERIFY(obj->descr->alignment % A == 0);
             BOOST_VERIFY(stride >= cols * sizeof(DATA_TYPE));
         }
 #endif

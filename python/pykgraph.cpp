@@ -20,16 +20,16 @@ class KGraph {
     void checkArray (python::object const &data) {
         PyArrayObject *array = reinterpret_cast<PyArrayObject *>(data.ptr());
         BOOST_VERIFY(array->nd == 2);
-        cerr << "dims: " << array->dimensions[0] << ' ' << array->dimensions[1] << endl;
-        cerr << "stride: " << array->strides[0] << ' ' << array->strides[1] << endl;
+        //cerr << "dims: " << array->dimensions[0] << ' ' << array->dimensions[1] << endl;
+        //cerr << "stride: " << array->strides[0] << ' ' << array->strides[1] << endl;
         PyArray_Descr *descr = array->descr;
         /*
         BOOST_VERIFY(descr->type_num == NPY_FLOAT);
         */
         BOOST_VERIFY(descr->elsize == sizeof(TYPE));
-        cerr << "type: " << descr->type_num << endl;
-        cerr << "size: " << descr->elsize << endl;
-        cerr << "alignment: " << descr->alignment << endl;
+        //cerr << "type: " << descr->type_num << endl;
+        //cerr << "size: " << descr->elsize << endl;
+        //cerr << "alignment: " << descr->alignment << endl;
     }
 
     template <typename TYPE>
@@ -107,8 +107,8 @@ public:
         params.prune = prune;
         PyArrayObject *pd = reinterpret_cast<PyArrayObject *>(data.ptr());
         switch (pd->descr->type_num) {
-            case NPY_FLOAT: buildImpl<float>(data, params); break;
-            case NPY_DOUBLE: buildImpl<double>(data, params); break;
+            case NPY_FLOAT: buildImpl<float>(data, params); return;
+            case NPY_DOUBLE: buildImpl<double>(data, params); return;
         }
         throw runtime_error("data type not supported.");
     }
