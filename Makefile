@@ -30,6 +30,7 @@ release:	all
 	cp Makefile.sdk $(RELEASE)/Makefile
 	mkdir $(RELEASE)/bin
 	cp $(RELEASE_BIN) $(RELEASE)/bin
+	cp -r python $(RELEASE)/
 	#tar zcf $(RELEASE).tar.gz $(RELEASE)
 
 $(PROGS) $(EXTRA_PROGS):	%:	%.cpp $(HEADERS) $(COMMON)
