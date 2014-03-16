@@ -4,7 +4,7 @@ OPT=-O3
 OPENMP=-fopenmp
 CXXFLAGS+=-fPIC -Wall -g -std=c++11 -I. $(OPENMP) $(OPT) $(ARCH) 
 LDFLAGS+=-static $(OPENMP)
-LDLIBS+=-lboost_timer -lboost_chrono -lboost_system -lboost_program_options -lm -lrt
+LDLIBS+=-lboost_timer -lboost_chrono -lboost_system -lboost_program_options -lgomp -lm -lrt
 FLANN_LIBS+=-lflann_cpp_s -lflann_s
 NABO_LIBS+=-lnabo
 
