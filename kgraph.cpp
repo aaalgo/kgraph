@@ -580,6 +580,35 @@ namespace kgraph {
                 nn_old.insert(nn_old.end(), rnn_old.begin(), rnn_old.end());
             }
         }
+
+        void prune2 () {
+            vector<vector<unsigned>> new_graph(graph.size());
+            vector<vector<unsigned>> reverse(graph.size());
+            vector<set<unsigned>> reachable(graph.size());
+            unsigned L = *max_element(M.begin(), M.end());
+            cerr << "Pruning ..." << endl;
+            for (unsigned l = 0; l < L; ++l) {
+                cerr << l << endl;
+                for (unsigned i = 0; i < graph.size(); ++i) {
+                    if (l >= M[i]) continue;
+                    unsigned T = graph[i][l];
+                    if (reachable[i].count(T)) continue;
+                    new_graph[i].push_back(T);
+                    reverse[T].push_back(i);
+                    // mark newly reachable nodes
+                    for (auto n2: new_graph[T]) {
+                        reachable[i].insert(n2);
+                    }
+                    for (auto r: reverse[i]) {
+                        reachable[r].insert(T);
+                    }
+                }
+            }
+            graph.swap(new_graph);
+            for (unsigned i = 0; i < graph.size(); ++i) {
+                M[i] = graph[i].size();
+            }
+        }
 public:
         KGraphConstructor (IndexOracle const &o, IndexParams const &p, IndexInfo *r)
             : oracle(o), params(p), pinfo(r), nhoods(o.size()), n_comps(0)
@@ -659,7 +688,7 @@ public:
             }
             M.resize(N);
             graph.resize(N);
-            if (params.prune > 1) throw runtime_error("prune level not supported.");
+            if (params.prune > 2) throw runtime_error("prune level not supported.");
             for (unsigned n = 0; n < N; ++n) {
                 auto &knn = graph[n];
                 M[n] = nhoods[n].M;
@@ -672,6 +701,9 @@ public:
                 for (unsigned k = 0; k < K; ++k) {
                     knn[k] = pool[k].id;
                 }
+            }
+            if (params.prune == 2) {
+                prune2();
             }
             if (pinfo) {
                 *pinfo = info;
