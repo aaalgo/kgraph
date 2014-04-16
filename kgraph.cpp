@@ -1,11 +1,14 @@
 #include <omp.h>
-#include <set>
+#include <unordered_set>
 #include <mutex>
 #include <iostream>
 #include <fstream>
 #include <random>
 #include <algorithm>
 #include <boost/timer/timer.hpp>
+#define timer timer_for_boost_progress_t
+#include <boost/progress.hpp>
+#undef timer
 #include <boost/dynamic_bitset.hpp>
 #include <boost/accumulators/accumulators.hpp>
 #include <boost/accumulators/statistics/stats.hpp>
@@ -448,31 +451,41 @@ namespace kgraph {
             vector<vector<unsigned>> new_graph(graph.size());
             vector<unsigned> new_M(graph.size());
             vector<vector<unsigned>> reverse(graph.size());
-            vector<set<unsigned>> reachable(graph.size());
+            vector<unordered_set<unsigned>> todo(graph.size());
             unsigned L = 0;
-            for (auto const &v: graph) {
-                if (v.size() > L) L = v.size();
-            }
-            cerr << "Level 2 Prune ..." << endl;
-            for (unsigned l = 0; l < L; ++l) {
-                cerr << l << endl;
+            {
+                cerr << "Level 2 Prune, stage 1/2 ..." << endl;
+                progress_display progress(graph.size(), cerr);
                 for (unsigned i = 0; i < graph.size(); ++i) {
-                    if (l >= graph[i].size()) continue;
-                    unsigned T = graph[i][l];
-                    if (reachable[i].insert(T).second) { // inserted
-                        new_graph[i].push_back(T);
-                        reverse[T].push_back(i);
-                        // mark newly reachable nodes
-                        for (auto n2: new_graph[T]) {
-                            reachable[i].insert(n2);
+                    if (graph[i].size() > L) L = graph[i].size();
+                    todo[i] = unordered_set<unsigned>(graph[i].begin(), graph[i].end());
+                    ++progress;
+                }
+            }
+            {
+                cerr << "Level 2 Prune, stage 2/2 ..." << endl;
+                progress_display progress(L, cerr);
+                for (unsigned l = 0; l < L; ++l) {
+                    for (unsigned i = 0; i < graph.size(); ++i) {
+                        if (todo[i].empty()) continue;
+                        BOOST_VERIFY(l < graph[i].size());
+                        unsigned T = graph[i][l];
+                        if (todo[i].erase(T)) { // still there, need to be added
+                            new_graph[i].push_back(T);
+                            reverse[T].push_back(i);
+                            // mark newly reachable nodes
+                            for (auto n2: new_graph[T]) {
+                                todo[i].erase(n2);
+                            }
+                            for (auto r: reverse[i]) {
+                                todo[r].erase(T);
+                            }
                         }
-                        for (auto r: reverse[i]) {
-                            reachable[r].insert(T);
+                        if (l + 1 == M[i]) {
+                            new_M[i] = new_graph[i].size();
                         }
                     }
-                    if (l + 1 == M[i]) {
-                        new_M[i] = new_graph[i].size();
-                    }
+                    ++progress;
                 }
             }
             graph.swap(new_graph);
@@ -754,21 +767,11 @@ public:
                 M[n] = nhoods[n].M;
                 auto const &pool = nhoods[n].pool;
                 unsigned K = params.L;
-                /*
-                if (params.prune == 1) {
-                    K = M[n];
-                }
-                */
                 knn.resize(K);
                 for (unsigned k = 0; k < K; ++k) {
                     knn[k] = pool[k].id;
                 }
             }
-            /*
-            if (params.prune == 2) {
-                prune2();
-            }
-            */
             if (params.prune) {
                 prune(o, params.prune);
             }
