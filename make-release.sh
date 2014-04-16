@@ -3,12 +3,14 @@
 vagrant up
 vagrant ssh -c /vagrant/make-release-vagrant.sh
 vagrant halt
-if [ ! -f kgraph-1.1-x86_64.tar.gz ]
+version=`cat version`
+release=kgraph-$version-x86_64
+if [ ! -f $release.tar.gz ]
 then
     echo FAILED
     exit
 fi
 
-#scp kgraph-1.1-x86_64.tar.gz cloud:/var/www/kgraph/releases
+scp $release.tar.gz cloud:/var/www/kgraph/releases
 
 
