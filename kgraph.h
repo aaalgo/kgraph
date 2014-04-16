@@ -8,6 +8,8 @@ namespace kgraph {
     static unsigned const default_L = 50;
     static unsigned const default_K = 10;
     static unsigned const default_P = 100;
+    static unsigned const default_M = 0;
+    static unsigned const default_T = 1;
     static unsigned const default_S = 10;
     static unsigned const default_R = 100;
     static unsigned const default_controls = 100;
@@ -16,6 +18,10 @@ namespace kgraph {
     static float const default_recall = 0.98;
     static float const default_epsilon = 1e30;
     static unsigned const default_verbosity = 1;
+    enum {
+        PRUNE_LEVEL_1 = 1,
+        PRUNE_LEVEL_2 = 2
+    };
     static unsigned const default_prune = 0;
 
     extern unsigned verbosity;
@@ -53,12 +59,14 @@ namespace kgraph {
 
         struct SearchParams {
             unsigned K;
+            unsigned M;
             unsigned P;
+            unsigned T;
             float epsilon;
             unsigned seed;
             unsigned init;
 
-            SearchParams (): K(default_K), P(default_P), epsilon(default_epsilon), seed(1998), init(0) {
+            SearchParams (): K(default_K), M(default_M), P(default_P), T(default_T), epsilon(default_epsilon), seed(1998), init(0) {
             }
         };
 
@@ -86,6 +94,7 @@ namespace kgraph {
         virtual void load (char const *path) = 0;
         virtual void save (char const *path) const = 0; // save to file
         virtual void build (IndexOracle const &oracle, IndexParams const &params, IndexInfo *info) = 0;
+        virtual void prune (IndexOracle const &oracle, unsigned level) = 0;
         virtual unsigned search (SearchOracle const &oracle, SearchParams const &params, unsigned *ids, SearchInfo *info) const = 0;
         static KGraph *create ();
         virtual void get_nn (unsigned id, unsigned *nns, unsigned *M, unsigned *L) const = 0;

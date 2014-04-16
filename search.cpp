@@ -32,7 +32,7 @@ int main (int argc, char *argv[]) {
     string output_path;
     string init_path;
     string eval_path;
-    unsigned K, P;
+    unsigned K, M, P, T;
 
     po::options_description desc_visible("General options");
     desc_visible.add_options()
@@ -44,7 +44,9 @@ int main (int argc, char *argv[]) {
     ("init", po::value(&init_path), "init path")
     ("eval", po::value(&eval_path), "eval path")
     (",K", po::value(&K)->default_value(default_K), "")
+    (",M", po::value(&M)->default_value(default_M), "")
     (",P", po::value(&P)->default_value(default_P), "")
+    (",T", po::value(&T)->default_value(default_T), "")
     ("linear", "")
     ;
 
@@ -102,7 +104,9 @@ int main (int argc, char *argv[]) {
         result.resize(query.size(), K);
         KGraph::SearchParams params;
         params.K = K;
+        params.M = M;
         params.P = P;
+        params.T = T;
         params.init = init;
         KGraph *kgraph = KGraph::create();
         kgraph->load(index_path.c_str());
