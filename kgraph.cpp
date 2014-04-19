@@ -341,6 +341,7 @@ namespace kgraph {
                     for (unsigned s: random) {
                         if (!flags[s]) {
                             knn[L++].id = s;
+                            //flags[s] = true;
                         }
                     }
                 }
@@ -352,7 +353,7 @@ namespace kgraph {
                     }
                 }
                 for (unsigned k = 0; k < L; ++k) {
-                    flags[knn[k].id] = false;
+                    flags[knn[k].id] = true;
                     knn[k].flag = true;
                     knn[k].dist = oracle(knn[k].id);
                 }
@@ -364,6 +365,7 @@ namespace kgraph {
                     if (knn[k].flag) {
                         knn[k].flag = false;
                         unsigned cur = knn[k].id;
+                        //BOOST_VERIFY(cur < graph.size());
                         unsigned maxM = M[cur];
                         if (params.M > maxM) maxM = params.M;
                         auto const &neighbors = graph[cur];
@@ -372,12 +374,15 @@ namespace kgraph {
                         }
                         for (unsigned m = 0; m < maxM; ++m) {
                             unsigned id = neighbors[m];
+                            //BOOST_VERIFY(id < graph.size());
                             if (flags[id]) continue;
                             flags[id] = true;
                             ++n_comps;
                             float dist = oracle(id);
                             Neighbor nn(id, dist);
                             unsigned r = UpdateKnnList(&knn[0], L, nn);
+                            BOOST_VERIFY(r <= L);
+                            //if (r > L) continue;
                             if (L + 1 < knn.size()) ++L;
                             if (r < nk) {
                                 nk = r;
