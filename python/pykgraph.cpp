@@ -116,10 +116,14 @@ public:
                            python::object const &query,
                 unsigned K,
                 unsigned P,
+                unsigned M,
+                unsigned T,
                 unsigned threads) {
         kgraph::KGraph::SearchParams params;
         params.K = K;
         params.P = P;
+        params.M = M;
+        params.T = T;
         PyArrayObject *pd = reinterpret_cast<PyArrayObject *>(data.ptr());
         PyArrayObject *pq = reinterpret_cast<PyArrayObject *>(data.ptr());
         if (pd->descr->type_num != pq->descr->type_num) throw runtime_error("data and query have different types");
@@ -154,6 +158,8 @@ BOOST_PYTHON_MODULE(pykgraph)
              python::arg("query"),
              python::arg("K") = kgraph::default_K,
              python::arg("P") = kgraph::default_P,
+             python::arg("M") = kgraph::default_M,
+             python::arg("T") = kgraph::default_T,
              python::arg("threads") = 0))
         ;
 }
