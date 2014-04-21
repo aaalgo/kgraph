@@ -1,6 +1,6 @@
 CC=g++ 
 ARCH=-msse2
-OPT=#-O3
+OPT=-O3
 OPENMP=-fopenmp
 CXXFLAGS+=-fPIC -Wall -g -std=c++11 -I. $(OPENMP) $(OPT) $(ARCH) 
 LDFLAGS+=-static $(OPENMP)
