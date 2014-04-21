@@ -2,7 +2,7 @@
 
 vagrant up
 vagrant ssh -c /vagrant/make-release-vagrant.sh
-vagrant halt
+#vagrant halt
 version=`cat version`
 release=kgraph-$version-x86_64
 if [ ! -f $release.tar.gz ]

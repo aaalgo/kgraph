@@ -9,7 +9,7 @@ FLANN_LIBS+=-lflann_cpp_s -lflann_s
 
 .PHONY:	all clean
 
-PROGS=index search split fvec2lshkit
+PROGS=index search split prune fvec2lshkit
 FLANN_PROGS=flann_index flann_search
 
 
