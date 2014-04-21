@@ -20,7 +20,7 @@ NABO_PROGS=nabo_search
 all:	libkgraph.so $(PROGS) $(FLANN_PROGS)
 
 RELEASE=kgraph-release
-RELEASE_SRC=Makefile kgraph.h kgraph-data.h index.cpp prune.cpp search.cpp flann_index.cpp flann_search.cpp split.cpp fvec2lshkit.cpp
+RELEASE_SRC=Makefile LICENSE kgraph.h kgraph-data.h index.cpp prune.cpp search.cpp flann_index.cpp flann_search.cpp split.cpp fvec2lshkit.cpp
 RELEASE_BIN=libkgraph.so $(PROGS) $(FLANN_PROGS)
 
 release:	all
