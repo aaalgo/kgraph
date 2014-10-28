@@ -2,7 +2,8 @@ CC=g++
 ARCH=-msse2
 OPT=-O3
 OPENMP=-fopenmp
-BUILD_INFO=-DKGRAPH_VERSION=\"$(shell git describe --always)\" -DKGRAPH_BUILD_ID=\"$(BUILD_ID)\" -DKGRAPH_BUILD_NUMBER=\"$(BUILD_NUMBER)\"
+VERSION=$(shell git describe --always)
+BUILD_INFO=-DKGRAPH_VERSION=\"$(VERSION)\" -DKGRAPH_BUILD_ID=\"$(BUILD_ID)\" -DKGRAPH_BUILD_NUMBER=\"$(BUILD_NUMBER)\"
 CXXFLAGS+=$(BUILD_INFO) -fPIC -Wall -g -std=c++11 -I. $(OPENMP) $(OPT) $(ARCH) 
 LDFLAGS+=-static $(OPENMP)
 LDLIBS+=-lboost_timer -lboost_chrono -lboost_system -lboost_program_options -lgomp -lm -lrt
@@ -21,7 +22,7 @@ NABO_PROGS=nabo_search
 all:	libkgraph.so $(PROGS) $(FLANN_PROGS)
 	echo $(BUILD_INFO)
 
-RELEASE=kgraph-$(shell git describe)-$(BUILD_NUMBER)
+RELEASE=kgraph-$(VERSION)-$(BUILD_NUMBER)
 RELEASE_SRC=Makefile LICENSE kgraph.h kgraph-data.h index.cpp prune.cpp search.cpp flann_index.cpp flann_search.cpp split.cpp fvec2lshkit.cpp
 RELEASE_BIN=libkgraph.so $(PROGS) $(FLANN_PROGS)
 
