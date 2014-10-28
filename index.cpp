@@ -84,6 +84,7 @@ int main (int argc, char *argv[]) {
 
     if (vm.count("version")) {
         cout << "KGraph version " << KGraph::version() << endl;
+        return 0;
     }
 
     if (vm.count("help")

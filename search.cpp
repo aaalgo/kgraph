@@ -37,6 +37,7 @@ int main (int argc, char *argv[]) {
     po::options_description desc_visible("General options");
     desc_visible.add_options()
     ("help,h", "produce help message.")
+    ("version,v", "print version number.")
     ("data", po::value(&input_path), "input path")
     ("index", po::value(&index_path), "index path")
     ("query", po::value(&query_path), "query path")
@@ -62,6 +63,11 @@ int main (int argc, char *argv[]) {
     po::variables_map vm; 
     po::store(po::command_line_parser(argc, argv).options(desc).positional(p).run(), vm);
     po::notify(vm); 
+
+    if (vm.count("version")) {
+        cout << "KGraph version " << KGraph::version() << endl;
+        return 0;
+    }
 
     if (vm.count("help") || vm.count("data") == 0 || vm.count("index") == 0 || vm.count("query") == 0) {
         cout << "search <data> <index> <query> [output]" << endl;
