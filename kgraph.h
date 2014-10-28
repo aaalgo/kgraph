@@ -97,6 +97,8 @@ namespace kgraph {
         virtual void prune (IndexOracle const &oracle, unsigned level) = 0;
         virtual unsigned search (SearchOracle const &oracle, SearchParams const &params, unsigned *ids, SearchInfo *info) const = 0;
         static KGraph *create ();
+        static char const* version ();
+
         virtual void get_nn (unsigned id, unsigned *nns, unsigned *M, unsigned *L) const = 0;
     };
 }

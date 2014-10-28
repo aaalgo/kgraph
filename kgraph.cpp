@@ -1,3 +1,5 @@
+static char const *kgraph_version = KGRAPH_VERSION "-" KGRAPH_BUILD_NUMBER "," KGRAPH_BUILD_ID;
+
 #include <omp.h>
 #include <unordered_set>
 #include <mutex>
@@ -795,6 +797,10 @@ public:
 
     KGraph *KGraph::create () {
         return new KGraphImpl;
+    }
+
+    char const* KGraph::version () {
+        return kgraph_version;
     }
 }
 

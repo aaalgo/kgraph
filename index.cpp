@@ -42,6 +42,7 @@ int main (int argc, char *argv[]) {
     po::options_description desc_visible("General options");
     desc_visible.add_options()
     ("help,h", "produce help message.")
+    ("version,v", "print version information.")
     ("data", po::value(&data_path), "input path")
     ("output", po::value(&output_path), "output path")
     (",K", po::value(&params.K)->default_value(default_K), "number of nearest neighbor")
@@ -79,6 +80,10 @@ int main (int argc, char *argv[]) {
 
     if (vm.count("raw") == 1) {
         lshkit = false;
+    }
+
+    if (vm.count("version")) {
+        cout << "KGraph version " << KGraph::version() << endl;
     }
 
     if (vm.count("help")
