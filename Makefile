@@ -2,7 +2,7 @@ CC=g++
 ARCH=-msse2
 OPT=-O3
 OPENMP=-fopenmp
-BUILD_INFO=-DKGRAPH_VERSION=\"$(shell git describe)\" -DKGRAPH_BUILD_ID=\"$(BUILD_ID)\" -DKGRAPH_BUILD_NUMBER=\"$(BUILD_NUMBER)\"
+BUILD_INFO=-DKGRAPH_VERSION=\"$(shell git describe --always)\" -DKGRAPH_BUILD_ID=\"$(BUILD_ID)\" -DKGRAPH_BUILD_NUMBER=\"$(BUILD_NUMBER)\"
 CXXFLAGS+=$(BUILD_INFO) -fPIC -Wall -g -std=c++11 -I. $(OPENMP) $(OPT) $(ARCH) 
 LDFLAGS+=-static $(OPENMP)
 LDLIBS+=-lboost_timer -lboost_chrono -lboost_system -lboost_program_options -lgomp -lm -lrt
