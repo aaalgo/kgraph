@@ -36,7 +36,7 @@ namespace kgraph {
     public:
         virtual unsigned size () const = 0;
         virtual float operator () (unsigned i) const = 0;
-        unsigned search (unsigned K, float epsilon, unsigned *ids) const;
+        unsigned search (unsigned K, float epsilon, unsigned *ids, float *dists = nullptr) const;
     };
 
     class KGraph {
@@ -95,11 +95,17 @@ namespace kgraph {
         virtual void save (char const *path) const = 0; // save to file
         virtual void build (IndexOracle const &oracle, IndexParams const &params, IndexInfo *info) = 0;
         virtual void prune (IndexOracle const &oracle, unsigned level) = 0;
-        virtual unsigned search (SearchOracle const &oracle, SearchParams const &params, unsigned *ids, SearchInfo *info) const = 0;
+        unsigned search (SearchOracle const &oracle, SearchParams const &params, unsigned *ids, SearchInfo *info) const {
+            return search(oracle, params, ids, nullptr, info);
+        }
+        virtual unsigned search (SearchOracle const &oracle, SearchParams const &params, unsigned *ids, float *dists, SearchInfo *info) const = 0;
         static KGraph *create ();
         static char const* version ();
 
-        virtual void get_nn (unsigned id, unsigned *nns, unsigned *M, unsigned *L) const = 0;
+        virtual void get_nn (unsigned id, unsigned *nns, unsigned *M, unsigned *L) const {
+            get_nn(id, nns, nullptr, M, L);
+        }
+        virtual void get_nn (unsigned id, unsigned *nns, float *dist, unsigned *M, unsigned *L) const = 0;
     };
 }
 

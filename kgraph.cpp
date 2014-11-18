@@ -177,7 +177,7 @@ namespace kgraph {
         pnns->swap(nns);
     }
 
-    unsigned SearchOracle::search (unsigned K, float epsilon, unsigned *ids) const {
+    unsigned SearchOracle::search (unsigned K, float epsilon, unsigned *ids, float *dist) const {
         vector<Neighbor> nns(K+1);
         unsigned N = size();
         unsigned L = 0;
@@ -190,6 +190,11 @@ namespace kgraph {
         if (ids) {
             for (unsigned k = 0; k < L; ++k) {
                 ids[k] = nns[k].id;
+            }
+        }
+        if (dist) {
+            for (unsigned k = 0; k < L; ++k) {
+                dist[k] = nns[k].dist;
             }
         }
         return L;
@@ -215,13 +220,13 @@ namespace kgraph {
 
     static char const *KGRAPH_MAGIC = "KNNGRAPH";
     static unsigned constexpr KGRAPH_MAGIC_SIZE = 8;
-    static uint32_t constexpr VERSION_MAJOR = 1;
+    static uint32_t constexpr VERSION_MAJOR = 2;
     static uint32_t constexpr VERSION_MINOR = 0;
 
     class KGraphImpl: public KGraph {
     protected:
         vector<unsigned> M;
-        vector<vector<unsigned>> graph;
+        vector<vector<Neighbor>> graph;
     public:
         virtual ~KGraphImpl () {
         }
@@ -318,7 +323,7 @@ namespace kgraph {
         }
         */
 
-        virtual unsigned search (SearchOracle const &oracle, SearchParams const &params, unsigned *ids, SearchInfo *pinfo) const {
+        virtual unsigned search (SearchOracle const &oracle, SearchParams const &params, unsigned *ids, float *dists, SearchInfo *pinfo) const {
             if (graph.size() > oracle.size()) {
                 throw runtime_error("dataset larger than index");
             }
@@ -375,7 +380,7 @@ namespace kgraph {
                             maxM = neighbors.size();
                         }
                         for (unsigned m = 0; m < maxM; ++m) {
-                            unsigned id = neighbors[m];
+                            unsigned id = neighbors[m].id;
                             //BOOST_VERIFY(id < graph.size());
                             if (flags[id]) continue;
                             flags[id] = true;
@@ -431,6 +436,11 @@ namespace kgraph {
                     ids[k] = results[k].id;
                 }
             }
+            if (dists) {
+                for (unsigned k = 0; k < L; ++k) {
+                    ids[k] = results[k].dist;
+                }
+            }
             if (pinfo) {
                 pinfo->updates = updates;
                 pinfo->cost = float(n_comps) / graph.size();
@@ -438,12 +448,21 @@ namespace kgraph {
             return L;
         }
 
-        virtual void get_nn (unsigned id, unsigned *nns, unsigned *pM, unsigned *pL) const {
+        virtual void get_nn (unsigned id, unsigned *nns, float *dist, unsigned *pM, unsigned *pL) const {
             BOOST_VERIFY(id < graph.size());
             auto const &v = graph[id];
             *pM = M[id];
             *pL = v.size();
-            copy(v.begin(), v.end(), nns);
+            if (nns) {
+                for (unsigned i = 0; i < v.size(); ++i) {
+                    nns[i] = v[i].id;
+                }
+            }
+            if (dist) {
+                for (unsigned i = 0; i < v.size(); ++i) {
+                    dist[i] = v[i].dist;
+                }
+            }
         }
 
         void prune1 () {
@@ -455,6 +474,7 @@ namespace kgraph {
         }
 
         void prune2 () {
+#if 0
             vector<vector<unsigned>> new_graph(graph.size());
             vector<unsigned> new_M(graph.size());
             vector<vector<unsigned>> reverse(graph.size());
@@ -497,6 +517,7 @@ namespace kgraph {
             }
             graph.swap(new_graph);
             M.swap(new_M);
+#endif
         }
 
         virtual void prune (IndexOracle const &oracle, unsigned level) {
@@ -776,7 +797,8 @@ public:
                 unsigned K = params.L;
                 knn.resize(K);
                 for (unsigned k = 0; k < K; ++k) {
-                    knn[k] = pool[k].id;
+                    knn[k].id = pool[k].id;
+                    knn[k].dist = pool[k].dist;
                 }
             }
             if (params.prune) {
