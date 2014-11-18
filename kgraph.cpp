@@ -80,7 +80,20 @@ namespace kgraph {
                 ++n_k;
                 ++n_p;
             }
-            else throw runtime_error("distance is unstable");
+            else {
+                cerr << "Distance is unstable." << endl;
+                cerr << "Exact";
+                for (auto const &p: knn) {
+                    cerr << ' ' << p.id << ':' << p.dist;
+                }
+                cerr << endl;
+                cerr << "Approx";
+                for (auto const &p: pool) {
+                    cerr << ' ' << p.id << ':' << p.dist;
+                }
+                cerr << endl;
+                throw runtime_error("distance is unstable");
+            }
         }
         return float(found) / knn.size();
     }
