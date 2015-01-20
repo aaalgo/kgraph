@@ -1,7 +1,7 @@
 #!/bin/bash
 
 vagrant up
-vagrant ssh -c /vagrant/make-release-vagrant.sh
+vagrant ssh -c /vagrant/kgraph/make-release-vagrant.sh
 #vagrant halt
 version=`cat version`
 release=kgraph-$version-x86_64
@@ -11,6 +11,6 @@ then
     exit
 fi
 
-scp $release.tar.gz cloud:/var/www/kgraph/releases
+#scp $release.tar.gz cloud:/var/www/kgraph/releases
 
 
