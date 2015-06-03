@@ -10,7 +10,7 @@ LDLIBS+=-lboost_timer -lboost_chrono -lboost_system -lboost_program_options -lgo
 FLANN_LIBS+=-lflann_cpp_s -lflann_s
 NABO_LIBS+=-lnabo
 
-.PHONY:	all python clean release
+.PHONY:	all python clean release deps-ubuntu
 
 COMMON=kgraph.o metric.o
 HEADERS=kgraph.h kgraph-data.h 
@@ -21,6 +21,9 @@ NABO_PROGS=nabo_search
 
 all:	libkgraph.so $(PROGS) $(FLANN_PROGS) python
 	echo $(BUILD_INFO)
+
+deps-ubuntu:
+	apt-get install -y libboost-timer-dev libboost-chrono-dev libboost-program-options-dev libboost-system-dev libboost-python-dev libflann-dev
 
 RELEASE=kgraph-release
 RELEASE_SRC=Makefile LICENSE kgraph.h kgraph-data.h index.cpp prune.cpp search.cpp flann_index.cpp flann_search.cpp split.cpp fvec2lshkit.cpp
