@@ -22,13 +22,21 @@
 
 namespace kgraph {
 
+    /// L2 square distance with AVX instructions.
+    /** AVX instructions have strong alignment requirement for t1 and t2.
+     */
     extern float float_l2sqr_avx (float const *t1, float const *t2, unsigned dim);
+    /// L2 square distance with SSE2 instructions.
     extern float float_l2sqr_sse2 (float const *t1, float const *t2, unsigned dim);
+    /// L2 square distance for uint8_t with SSE2 instructions (for SIFT).
     extern float uint8_l2sqr_sse2 (uint8_t const *t1, uint8_t const *t2, unsigned dim);
 
     using std::vector;
     using std::runtime_error;
+
+    /// namespace for various distance metrics.
     namespace metric {
+        /// L2 square distance.
         struct l2sqr {
             template <typename T>
             static float apply (T const *t1, T const *t2, unsigned dim) {
@@ -41,6 +49,7 @@ namespace kgraph {
                 return r;
             }
         };
+        /// L2 distance.
         struct l2 {
             template <typename T>
             static float apply (T const *t1, T const *t2, unsigned dim) {
@@ -49,6 +58,7 @@ namespace kgraph {
         };
     }
 
+    /// Matrix data.
     template <typename T, unsigned A = KGRAPH_MATRIX_ALIGN>
     class Matrix {
         unsigned col;
@@ -142,6 +152,7 @@ namespace kgraph {
         }
     };
 
+    /// Matrix proxy to interface with 3rd party libraries (FLANN, OpenCV, NumPy).
     template <typename DATA_TYPE, unsigned A = KGRAPH_MATRIX_ALIGN>
     class MatrixProxy {
         unsigned rows;
@@ -155,18 +166,21 @@ namespace kgraph {
 
 #ifndef __AVX__
 #ifdef FLANN_DATASET_H_
+        /// Construct from FLANN matrix.
         MatrixProxy (flann::Matrix<DATA_TYPE> const &m)
             : rows(m.rows), cols(m.cols), stride(m.stride), data(m.data) {
             BOOST_VERIFY(stride % A == 0);
         }
 #endif
 #ifdef __OPENCV_CORE_HPP__
+        /// Construct from OpenCV matrix.
         MatrixProxy (cv::Mat const &m)
             : rows(m.rows), cols(m.cols), stride(m.step), data(m.data) {
             BOOST_VERIFY(stride % A == 0);
         }
 #endif
 #ifdef NPY_NDARRAYOBJECT_H
+        /// Construct from NumPy matrix.
         MatrixProxy (PyArrayObject *obj) {
             BOOST_VERIFY(obj->nd == 2);
             rows = obj->dimensions[0];
@@ -190,6 +204,10 @@ namespace kgraph {
         }
     };
 
+    /// Oracle for matrix data.
+    /** DATA_TYPE can be Matrix or MatrixProxy,
+    * DIST_TYPE should be one class within the namespace kgraph.metric.
+    */
     template <typename DATA_TYPE, typename DIST_TYPE>
     class MatrixOracle: public kgraph::IndexOracle {
         MatrixProxy<DATA_TYPE> proxy;
