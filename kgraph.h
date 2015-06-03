@@ -9,9 +9,9 @@
 #define WDONG_KGRAPH
 
 namespace kgraph {
-    static unsigned const default_iterations =  100;
-    static unsigned const default_L = 50;
-    static unsigned const default_K = 10;
+    static unsigned const default_iterations =  30;
+    static unsigned const default_L = 100;
+    static unsigned const default_K = 25;
     static unsigned const default_P = 100;
     static unsigned const default_M = 0;
     static unsigned const default_T = 1;
@@ -19,8 +19,8 @@ namespace kgraph {
     static unsigned const default_R = 100;
     static unsigned const default_controls = 100;
     static unsigned const default_seed = 1998;
-    static float const default_delta = 0.005;
-    static float const default_recall = 0.98;
+    static float const default_delta = 0.002;
+    static float const default_recall = 0.99;
     static float const default_epsilon = 1e30;
     static unsigned const default_verbosity = 1;
     enum {
