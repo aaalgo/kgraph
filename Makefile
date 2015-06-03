@@ -10,7 +10,7 @@ LDLIBS+=-lboost_timer -lboost_chrono -lboost_system -lboost_program_options -lgo
 FLANN_LIBS+=-lflann_cpp_s -lflann_s
 NABO_LIBS+=-lnabo
 
-.PHONY:	all clean release
+.PHONY:	all python clean release
 
 COMMON=kgraph.o metric.o
 HEADERS=kgraph.h kgraph-data.h 
@@ -19,12 +19,22 @@ EXTRA_PROGS=test
 FLANN_PROGS=flann_index flann_search
 NABO_PROGS=nabo_search
 
-all:	libkgraph.so $(PROGS) $(FLANN_PROGS)
+all:	libkgraph.so $(PROGS) $(FLANN_PROGS) python
 	echo $(BUILD_INFO)
 
 RELEASE=kgraph-release
 RELEASE_SRC=Makefile LICENSE kgraph.h kgraph-data.h index.cpp prune.cpp search.cpp flann_index.cpp flann_search.cpp split.cpp fvec2lshkit.cpp
 RELEASE_BIN=libkgraph.so $(PROGS) $(FLANN_PROGS)
+
+python:
+	make -C python
+
+install:	all 
+	mkdir -p /usr/local/lib /usr/local/include
+	cp libkgraph.so /usr/local/lib
+	cp $(HEADERS) /usr/local/include
+	make -C python install
+	ldconfig
 
 release:	all
 	rm -rf $(RELEASE)
