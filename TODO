@@ -1,0 +1,5 @@
+1. Fast ending iterations.
+When offline graph construction approaches ending, only a few nodes are still improving.  In such cases, global iterations should no longer be used.  Rather, query-like iterative improving process should be used.
+
+2. Performance modeling and automatic parameter proposing.
+For query parameters, the user should only need to supply a required recall, and all parameters shall be automatically suggested via modeling.
