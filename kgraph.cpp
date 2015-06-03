@@ -487,7 +487,6 @@ namespace kgraph {
         }
 
         void prune2 () {
-#if 0
             vector<vector<unsigned>> new_graph(graph.size());
             vector<unsigned> new_M(graph.size());
             vector<vector<unsigned>> reverse(graph.size());
@@ -530,7 +529,6 @@ namespace kgraph {
             }
             graph.swap(new_graph);
             M.swap(new_M);
-#endif
         }
 
         virtual void prune (IndexOracle const &oracle, unsigned level) {
