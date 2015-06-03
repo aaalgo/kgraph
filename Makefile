@@ -23,7 +23,7 @@ all:	libkgraph.so $(PROGS) $(FLANN_PROGS) python
 	echo $(BUILD_INFO)
 
 deps-ubuntu:
-	apt-get install -y libboost-timer-dev libboost-chrono-dev libboost-program-options-dev libboost-system-dev libboost-python-dev libflann-dev
+	apt-get install -y libboost-timer-dev libboost-chrono-dev libboost-program-options-dev libboost-system-dev libboost-python-dev libflann-dev python-numpy
 
 RELEASE=kgraph-release
 RELEASE_SRC=Makefile LICENSE kgraph.h kgraph-data.h index.cpp prune.cpp search.cpp flann_index.cpp flann_search.cpp split.cpp fvec2lshkit.cpp
