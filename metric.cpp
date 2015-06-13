@@ -5,8 +5,8 @@
 #ifdef __AVX__
 #include <immintrin.h>
 #define AVX_L2SQR(addr1, addr2, dest, tmp1, tmp2) \
-    tmp1 = _mm256_load_ps(addr1);\
-    tmp2 = _mm256_load_ps(addr2);\
+    tmp1 = _mm256_loadu_ps(addr1);\
+    tmp2 = _mm256_loadu_ps(addr2);\
     tmp1 = _mm256_sub_ps(tmp1, tmp2); \
     tmp1 = _mm256_mul_ps(tmp1, tmp1); \
     dest = _mm256_add_ps(dest, tmp1); 
