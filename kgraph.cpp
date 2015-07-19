@@ -190,14 +190,14 @@ namespace kgraph {
         pnns->swap(nns);
     }
 
-    unsigned SearchOracle::search (unsigned K, float epsilon, unsigned *ids, float *dist) const {
+    unsigned SearchOracle::search (unsigned K, float epsilon, unsigned *ids, float *dists) const {
         vector<Neighbor> nns(K+1);
         unsigned N = size();
         unsigned L = 0;
         for (unsigned k = 0; k < N; ++k) {
-            float dist = operator () (k);
-            if (dist > epsilon) continue;
-            UpdateKnnList(&nns[0], L, Neighbor(k, dist));
+            float k_dist = operator () (k);
+            if (k_dist > epsilon) continue;
+            UpdateKnnList(&nns[0], L, Neighbor(k, k_dist));
             if (L < K) ++L;
         }
         if (ids) {
@@ -205,9 +205,9 @@ namespace kgraph {
                 ids[k] = nns[k].id;
             }
         }
-        if (dist) {
+        if (dists) {
             for (unsigned k = 0; k < L; ++k) {
-                dist[k] = nns[k].dist;
+                dists[k] = nns[k].dist;
             }
         }
         return L;
@@ -451,7 +451,7 @@ namespace kgraph {
             }
             if (dists) {
                 for (unsigned k = 0; k < L; ++k) {
-                    ids[k] = results[k].dist;
+                    dists[k] = results[k].dist;
                 }
             }
             if (pinfo) {
