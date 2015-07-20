@@ -150,7 +150,7 @@ public:
         params.M = M;
         params.T = T;
         PyArrayObject *pd = reinterpret_cast<PyArrayObject *>(data.ptr());
-        PyArrayObject *pq = reinterpret_cast<PyArrayObject *>(data.ptr());
+        PyArrayObject *pq = reinterpret_cast<PyArrayObject *>(query.ptr());
         if (pd->descr->type_num != pq->descr->type_num) throw runtime_error("data and query have different types");
         switch (pd->descr->type_num) {
             case NPY_FLOAT: return searchImpl<float>(data, query, params, threads, withDistance);
