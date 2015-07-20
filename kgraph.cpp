@@ -340,6 +340,13 @@ namespace kgraph {
             if (graph.size() > oracle.size()) {
                 throw runtime_error("dataset larger than index");
             }
+            if (params.P >= graph.size()) {
+                if (pinfo) {
+                    pinfo->updates = 0;
+                    pinfo->cost = 1.0;
+                }
+                return oracle.search(params.K, params.epsilon, ids, dists);
+            }
             vector<Neighbor> knn(params.K + params.P +1);
             vector<Neighbor> results;
             boost::dynamic_bitset<> flags(graph.size(), false);
