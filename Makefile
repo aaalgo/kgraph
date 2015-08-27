@@ -15,11 +15,11 @@ NABO_LIBS+=-lnabo
 COMMON=kgraph.o metric.o
 HEADERS=kgraph.h kgraph-data.h 
 PROGS=index search prune split fvec2lshkit 
-EXTRA_PROGS=test
+EXTRA_PROGS=test 
 FLANN_PROGS=flann_index flann_search
 NABO_PROGS=nabo_search
 
-all:	libkgraph.so $(PROGS) python
+all:	libkgraph.a libkgraph.so $(PROGS) python $(EXTRA_PROGS)
 	echo $(BUILD_INFO)
 
 flann:	$(FANN_PROGS)
@@ -29,7 +29,7 @@ deps-ubuntu:
 
 RELEASE=kgraph-release
 RELEASE_SRC=Makefile LICENSE kgraph.h kgraph-data.h index.cpp prune.cpp search.cpp flann_index.cpp flann_search.cpp split.cpp fvec2lshkit.cpp
-RELEASE_BIN=libkgraph.so $(PROGS) #$(FLANN_PROGS)
+RELEASE_BIN=libkgraph.a libkgraph.so $(PROGS) #$(FLANN_PROGS)
 
 python:
 	make -C python
@@ -62,6 +62,9 @@ $(NABO_PROGS):	%:	%.cpp $(HEADERS) $(COMMON)
 
 libkgraph.so:	$(COMMON)
 	$(CXX) -shared -o $@ $^ $(LDLIBS)
+
+libkgraph.a:	$(COMMON)
+	ar rvs $@ $^
 
 %.o:	%.cpp $(HEADERS)
 	$(CXX) $(CXXFLAGS) -c $*.cpp 

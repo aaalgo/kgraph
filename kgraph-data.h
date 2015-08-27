@@ -28,8 +28,15 @@ namespace kgraph {
     extern float float_l2sqr_avx (float const *t1, float const *t2, unsigned dim);
     /// L2 square distance with SSE2 instructions.
     extern float float_l2sqr_sse2 (float const *t1, float const *t2, unsigned dim);
+    extern float float_l2sqr_sse2 (float const *, unsigned dim);
+    extern float float_dot_sse2 (float const *, float const *, unsigned dim);
     /// L2 square distance for uint8_t with SSE2 instructions (for SIFT).
     extern float uint8_l2sqr_sse2 (uint8_t const *t1, uint8_t const *t2, unsigned dim);
+
+    extern float float_l2sqr (float const *, float const *, unsigned dim);
+    extern float float_l2sqr (float const *, unsigned dim);
+    extern float float_dot (float const *, float const *, unsigned dim);
+
 
     using std::vector;
     using std::runtime_error;
@@ -43,6 +50,26 @@ namespace kgraph {
                 float r = 0;
                 for (unsigned i = 0; i < dim; ++i) {
                     float v = float(t1[i]) - float(t2[i]);
+                    v *= v;
+                    r += v;
+                }
+                return r;
+            }
+
+            template <typename T>
+            static float dot (T const *t1, T const *t2, unsigned dim) {
+                float r = 0;
+                for (unsigned i = 0; i < dim; ++i) {
+                    r += float(t1[i]) *float(t2[i]);
+                }
+                return r;
+            }
+
+            template <typename T>
+            static float norm2 (T const *t1, unsigned dim) {
+                float r = 0;
+                for (unsigned i = 0; i < dim; ++i) {
+                    float v = float(t1[i]);
                     v *= v;
                     r += v;
                 }
@@ -202,6 +229,9 @@ namespace kgraph {
         DATA_TYPE const *operator [] (unsigned i) const {
             return reinterpret_cast<DATA_TYPE const *>(data + stride * i);
         }
+        DATA_TYPE *operator [] (unsigned i) {
+            return const_cast<DATA_TYPE *>(reinterpret_cast<DATA_TYPE const *>(data + stride * i));
+        }
     };
 
     /// Oracle for matrix data.
@@ -290,6 +320,14 @@ namespace kgraph { namespace metric {
         template <>
         inline float l2sqr::apply<float> (float const *t1, float const *t2, unsigned dim) {
             return float_l2sqr_sse2(t1, t2, dim);
+        }
+        template <>
+        inline float l2sqr::dot<float> (float const *t1, float const *t2, unsigned dim) {
+            return float_dot_sse2(t1, t2, dim);
+        }
+        template <>
+        inline float l2sqr::norm2<float> (float const *t1, unsigned dim) {
+            return float_l2sqr_sse2(t1, dim);
         }
         template <>
         inline float l2sqr::apply<uint8_t> (uint8_t const *t1, uint8_t const *t2, unsigned dim) {
