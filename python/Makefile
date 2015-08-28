@@ -5,7 +5,8 @@ CXXFLAGS = -fopenmp -g -fPIC -std=c++11 -I$(PYTHON_INCLUDE) -I..
 LDFLAGS = -L../bin 
 LDLIBS = ../libkgraph.a -lboost_python -lboost_timer -lboost_chrono -lpython$(PYTHON_VERSION) -lgomp
 
-ifeq (${BLAS}, true)
+ifeq (${BLAS}, false)
+else
 	CXXFLAGS += -DUSE_BLAS=1
 	LDLIBS += /usr/lib/openblas-base/libblas.a
 endif

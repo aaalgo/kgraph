@@ -36,16 +36,16 @@ namespace python = boost::python;
 namespace kgraph {
 
 #ifdef USE_BLAS
-    void blas_dot (MatrixProxy<float> const &p1, MatrixProxy<float> const &p2, Matrix<float> *r) {
+    void blas_prod (MatrixProxy<float> const &p1, float const *p2, int n2, int l2, Matrix<float> *r) {
         r->zero();
-        cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasTrans, p2.size(), p1.size(), p1.dim(),
-                    -2.0, p1[0], p1.dim(), p2[0], p2.dim(), 0, (*r)[0], p1.dim());
+        cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasTrans, p1.size(), n2, p1.dim(),
+                    -2.0, p1[0], p1[1]-p1[0], p2, l2, 0, (*r)[0], (*r)[1]-(*r)[0]);
     }
 
-    void blas_dot (MatrixProxy<double> const &p1, MatrixProxy<double> const &p2, Matrix<double> *r) {
+    void blas_prod (MatrixProxy<double> const &p1, double const *p2, int n2, int l2, Matrix<double> *r) {
         r->zero();
-        cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasTrans, p2.size(), p1.size(), p1.dim(),
-                    -2.0, p1[0], p1.dim(), p2[0], p2.dim(), 0, (*r)[0], p1.dim());
+        cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasTrans, p1.size(), n2, p1.dim(),
+                    -2.0, p1[0], p1[1]-p1[0], p2, l2, 0, (*r)[0], (*r)[1]-(*r)[0]);
     }
 #endif
 
@@ -90,37 +90,76 @@ public:
     template <typename MATRIX_TYPE>
     void blasQuery (MATRIX_TYPE const &q, unsigned K, float epsilon,
             kgraph::MatrixProxy<unsigned, 1> *ids, kgraph::MatrixProxy<float, 1> *dists) {
+        BOOST_VERIFY(dists);
 
+        static unsigned constexpr BLOCK_SIZE = 1024;
         MatrixProxy<DATA_TYPE> q_proxy(q);
-        vector<DATA_TYPE> q_n2(q_proxy.size());
-        for (unsigned i = 0; i < q_proxy.size(); ++i) {
-            q_n2[i] = kgraph::metric::l2sqr::norm2(q_proxy[i], proxy.dim());
+        unsigned block = BLOCK_SIZE;
+        if (block < K) {
+            block = K;
         }
-        Matrix<DATA_TYPE> dot(q_proxy.size(), proxy.size());
-        blas_dot(q_proxy, proxy, &dot);
-        vector<float> dummy(K);
-#pragma omp parallel
-        {
-            vector<pair<DATA_TYPE, unsigned>> rank(proxy.size());
-#pragma omp for
-            for (unsigned i = 0; i < q_proxy.size(); ++i) {
-                DATA_TYPE *row = dot[i];
-                DATA_TYPE qn2 = q_n2[i];
-                for (unsigned j = 0; j < proxy.size(); ++j) {
-                    rank[j] = std::make_pair(qn2 + n2[j] + row[j], j);
-                }
-                std::sort(rank.begin(), rank.end());
-                unsigned j = 0;
+        if (block >= proxy.size()) {
+            block = proxy.size();
+        }
+        BOOST_VERIFY(block >= K);
+        Matrix<DATA_TYPE> dot(q_proxy.size(), block);
 
-                unsigned *pid = (*ids)[i];
-                float *pdist = dists ? (*dists)[i] : &dummy[0];
+        vector<float> qn2s(q_proxy.size());
+        for (unsigned i = 0; i < q_proxy.size(); ++i) {
+            qn2s[i] = kgraph::metric::l2sqr::norm2(q_proxy[i], q_proxy.dim());
+        }
 
-                while ((j < K) && (rank[j].second <= epsilon)) {
-                    pid[j] = rank[j].first;
-                    pdist[j] = rank[j].second;
-                    ++j;
+        unsigned begin = 0; // divide all data into blocks
+        while (begin < proxy.size()) {
+            unsigned end = begin + block;
+            if (end > proxy.size()) {
+                end = proxy.size();
+            }
+            blas_prod(q_proxy, proxy[begin], end-begin, proxy[1]-proxy[0], &dot);
+            // do one block
+            if (begin == 0) {
+                // first block
+#pragma omp parallel for
+                for (unsigned i = 0; i < q_proxy.size(); ++i) {
+                    DATA_TYPE *row = dot[i];
+                    DATA_TYPE qn2 = qn2s[i];
+                    vector<pair<DATA_TYPE, unsigned>> rank(end-begin);
+                    for (unsigned j = 0; j < rank.size(); ++j) {
+                        rank[j] = std::make_pair(qn2 + n2[j] + row[j], j);
+                    }
+                    std::sort(rank.begin(), rank.end());
+                    unsigned *pid = (*ids)[i];
+                    float *pdist = (*dists)[i];
+                    for (unsigned j = 0; j < K; ++j) {
+                        pid[j] = rank[j].second;
+                        pdist[j] = rank[j].first;
+                    }
                 }
             }
+            else { // subsequent blocks, using inserting instead of sort
+#pragma omp parallel for
+                for (unsigned i = 0; i < q_proxy.size(); ++i) {
+                    DATA_TYPE *row = dot[i];
+                    DATA_TYPE qn2 = qn2s[i];
+                    unsigned *pid = (*ids)[i];
+                    float *pdist = (*dists)[i];
+                    for (unsigned j = 0; j < end-begin; ++j) {
+                        // insert
+                        unsigned id = begin + j;
+                        float d = qn2 + n2[id] + row[j];
+                        unsigned c = K-1;
+                        if (d >= pdist[c]) continue;
+                        while ((c > 0) && (d < pdist[c-1])) {
+                            pid[c] = pid[c-1];
+                            pdist[c] = pdist[c-1];
+                            --c;
+                        }
+                        pid[c] = id;
+                        pdist[c] = d;
+                    }
+                }
+            }
+            begin = end;
         }
     }
 #endif
@@ -154,6 +193,10 @@ class KGraph {
         checkArray<TYPE>(data);
         kgraph::MatrixProxy<TYPE> dmatrix(reinterpret_cast<PyArrayObject *>(data.ptr()));
         kgraph::MatrixOracleL2SQR<TYPE> oracle(dmatrix);
+        if (dmatrix.dim() % 4) {
+            cerr << "Dimension has to be multiples of 4." << endl;
+            BOOST_VERIFY(0);
+        }
         index->build(oracle, params, NULL);
         hasIndex = true;
     }
@@ -168,6 +211,10 @@ class KGraph {
         checkArray<TYPE>(data);
         checkArray<TYPE>(query);
         kgraph::MatrixProxy<TYPE> dmatrix(reinterpret_cast<PyArrayObject *>(data.ptr()));
+        if (dmatrix.dim() % 4) {
+            cerr << "Dimension has to be multiples of 4." << endl;
+            BOOST_VERIFY(0);
+        }
         kgraph::MatrixProxy<TYPE> qmatrix(reinterpret_cast<PyArrayObject *>(query.ptr()));
         kgraph::MatrixOracleL2SQR<TYPE> oracle(dmatrix);
         npy_intp dims[] = {qmatrix.size(), params.K};
@@ -180,12 +227,7 @@ class KGraph {
 #endif
 #ifdef USE_BLAS
         if (blas) {
-            if (withDistance) {
-                oracle.blasQuery(qmatrix, params.K, params.epsilon, &rmatrix, &distmatrix);
-            }
-            else {
-                oracle.blasQuery(qmatrix, params.K, params.epsilon, &rmatrix, NULL);
-            }
+            oracle.blasQuery(qmatrix, params.K, params.epsilon, &rmatrix, &distmatrix);
         }
         else
 #endif
@@ -221,6 +263,7 @@ class KGraph {
             return python::object(python::handle<>(tup));
         }
         else {
+            Py_DECREF(distance);
             return python::object(python::handle<>(result));
         }
     }
