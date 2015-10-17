@@ -439,6 +439,7 @@ namespace kgraph {
                     }
                 }
             }
+            results.pop_back();
             // check epsilon
             {
                 for (unsigned l = 0; l < results.size(); ++l) {
@@ -448,7 +449,10 @@ namespace kgraph {
                     }
                 }
             }
-            unsigned L = results.size() - 1;
+            unsigned L = results.size();
+            if (!(L <= params.K)) {
+                cerr << L << ' ' << params.K << endl;
+            }
             BOOST_VERIFY(L <= params.K);
             // check epsilon
             if (ids) {
