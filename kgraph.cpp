@@ -240,6 +240,7 @@ namespace kgraph {
         vector<unsigned> M;
         vector<vector<Neighbor>> graph;
         bool no_dist;   // Distance & flag information in Neighbor is not valid.
+
     public:
         virtual ~KGraphImpl () {
         }
@@ -286,8 +287,8 @@ namespace kgraph {
         }
 
         virtual void save (char const *path, int format) const {
-            uint32_t N = graph.size();
             ofstream os(path, ios::binary);
+            uint32_t N = graph.size();
             os.write(KGRAPH_MAGIC, KGRAPH_MAGIC_SIZE);
             os.write(reinterpret_cast<char const *>(&SIGNATURE_VERSION), sizeof(SIGNATURE_VERSION));
             uint32_t sig_cap = format;
