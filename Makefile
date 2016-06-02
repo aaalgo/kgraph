@@ -5,7 +5,7 @@ OPENMP=-fopenmp
 VERSION=$(shell git describe --always)
 BUILD_INFO=-DKGRAPH_VERSION=\"$(VERSION)\" -DKGRAPH_BUILD_ID=\"$(BUILD_ID)\" -DKGRAPH_BUILD_NUMBER=\"$(BUILD_NUMBER)\"
 CXXFLAGS+=$(BUILD_INFO) -fPIC -Wall -g -std=c++11 -I. $(OPENMP) $(OPT) $(ARCH) 
-LDFLAGS+=-static $(OPENMP)
+LDFLAGS+=$(OPENMP)
 LDLIBS+=-lboost_timer -lboost_chrono -lboost_system -lboost_program_options -lgomp -lm -lrt
 FLANN_LIBS+=-lflann_cpp_s -lflann_s
 NABO_LIBS+=-lnabo
@@ -14,7 +14,7 @@ NABO_LIBS+=-lnabo
 
 COMMON=kgraph.o metric.o
 HEADERS=kgraph.h kgraph-data.h 
-PROGS=index search prune split fvec2lshkit 
+PROGS=resave index search prune split fvec2lshkit 
 EXTRA_PROGS=test 
 FLANN_PROGS=flann_index flann_search
 NABO_PROGS=nabo_search

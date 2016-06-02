@@ -49,7 +49,7 @@ namespace kgraph {
     }
 
     struct Neighbor {
-        unsigned id;
+        uint32_t id;
         float dist;
         bool flag;  // whether this entry is a newly found one
         Neighbor () {}
@@ -233,13 +233,13 @@ namespace kgraph {
 
     static char const *KGRAPH_MAGIC = "KNNGRAPH";
     static unsigned constexpr KGRAPH_MAGIC_SIZE = 8;
-    static uint32_t constexpr VERSION_MAJOR = 2;
-    static uint32_t constexpr VERSION_MINOR = 0;
+    static uint32_t constexpr SIGNATURE_VERSION = 2;
 
     class KGraphImpl: public KGraph {
     protected:
         vector<unsigned> M;
         vector<vector<Neighbor>> graph;
+        bool no_dist;   // Distance & flag information in Neighbor is not valid.
     public:
         virtual ~KGraphImpl () {
         }
@@ -247,20 +247,22 @@ namespace kgraph {
             BOOST_VERIFY(sizeof(unsigned) == sizeof(uint32_t));
             ifstream is(path, ios::binary);
             char magic[KGRAPH_MAGIC_SIZE];
-            uint32_t major;
-            uint32_t minor;
+            uint32_t sig_version;
+            uint32_t sig_cap;
             uint32_t N;
             is.read(magic, sizeof(magic));
-            is.read(reinterpret_cast<char *>(&major), sizeof(major));
-            is.read(reinterpret_cast<char *>(&minor), sizeof(minor));
-            if (major != VERSION_MAJOR) throw runtime_error("data version not supported.");
+            is.read(reinterpret_cast<char *>(&sig_version), sizeof(sig_version));
+            is.read(reinterpret_cast<char *>(&sig_cap), sizeof(sig_cap));
+            if (sig_version != SIGNATURE_VERSION) throw runtime_error("data version not supported.");
             is.read(reinterpret_cast<char *>(&N), sizeof(N));
             if (!is) runtime_error("error reading index file.");
             for (unsigned i = 0; i < KGRAPH_MAGIC_SIZE; ++i) {
                 if (KGRAPH_MAGIC[i] != magic[i]) runtime_error("index corrupted.");
             }
+            no_dist = sig_cap & FORMAT_NO_DIST;
             graph.resize(N);
             M.resize(N);
+            vector<uint32_t> nids;
             for (unsigned i = 0; i < graph.size(); ++i) {
                 auto &knn = graph[i];
                 unsigned K;
@@ -268,23 +270,45 @@ namespace kgraph {
                 is.read(reinterpret_cast<char *>(&K), sizeof(K));
                 if (!is) runtime_error("error reading index file.");
                 knn.resize(K);
-                is.read(reinterpret_cast<char *>(&knn[0]), K * sizeof(knn[0]));
+                if (no_dist) {
+                    nids.resize(K);
+                    is.read(reinterpret_cast<char *>(&nids[0]), K * sizeof(nids[0]));
+                    for (unsigned k = 0; k < K; ++k) {
+                        knn[k].id = nids[k];
+                        knn[k].dist = 0;
+                        knn[k].flag = false;
+                    }
+                }
+                else {
+                    is.read(reinterpret_cast<char *>(&knn[0]), K * sizeof(knn[0]));
+                }
             }
         }
 
-        virtual void save (char const *path) const {
+        virtual void save (char const *path, int format) const {
             uint32_t N = graph.size();
             ofstream os(path, ios::binary);
             os.write(KGRAPH_MAGIC, KGRAPH_MAGIC_SIZE);
-            os.write(reinterpret_cast<char const *>(&VERSION_MAJOR), sizeof(VERSION_MAJOR));
-            os.write(reinterpret_cast<char const *>(&VERSION_MINOR), sizeof(VERSION_MINOR));
+            os.write(reinterpret_cast<char const *>(&SIGNATURE_VERSION), sizeof(SIGNATURE_VERSION));
+            uint32_t sig_cap = format;
+            os.write(reinterpret_cast<char const *>(&sig_cap), sizeof(sig_cap));
             os.write(reinterpret_cast<char const *>(&N), sizeof(N));
+            vector<unsigned> nids;
             for (unsigned i = 0; i < graph.size(); ++i) {
                 auto const &knn = graph[i];
                 uint32_t K = knn.size();
                 os.write(reinterpret_cast<char const *>(&M[i]), sizeof(M[i]));
                 os.write(reinterpret_cast<char const *>(&K), sizeof(K));
-                os.write(reinterpret_cast<char const *>(&knn[0]), K * sizeof(knn[0]));
+                if (format & FORMAT_NO_DIST) {
+                    nids.resize(K);
+                    for (unsigned k = 0; k < K; ++k) {
+                        nids[k] = knn[k].id;
+                    }
+                    os.write(reinterpret_cast<char const *>(&nids[0]), K * sizeof(nids[0]));
+                }
+                else {
+                    os.write(reinterpret_cast<char const *>(&knn[0]), K * sizeof(knn[0]));
+                }
             }
         }
 
@@ -483,6 +507,7 @@ namespace kgraph {
                 }
             }
             if (dist) {
+                if (no_dist) throw runtime_error("distance information is not available");
                 for (unsigned i = 0; i < v.size(); ++i) {
                     dist[i] = v[i].dist;
                 }
@@ -738,6 +763,7 @@ public:
         KGraphConstructor (IndexOracle const &o, IndexParams const &p, IndexInfo *r)
             : oracle(o), params(p), pinfo(r), nhoods(o.size()), n_comps(0)
         {
+            no_dist = false;
             boost::timer::cpu_timer timer;
             //params.check();
             unsigned N = oracle.size();

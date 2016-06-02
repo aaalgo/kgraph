@@ -116,6 +116,11 @@ namespace kgraph {
             }
         };
 
+        enum {
+            FORMAT_DEFAULT = 0,
+            FORMAT_NO_DIST = 1
+        };
+
         /// Information and statistics of the indexing algorithm.
         struct IndexInfo {
             enum StopCondition {
@@ -148,7 +153,7 @@ namespace kgraph {
         /**
          * @param path Path to the index file.
          */
-        virtual void save (char const *path) const = 0; // save to file
+        virtual void save (char const *path, int format = FORMAT_DEFAULT) const = 0; // save to file
         /// Build the index
         virtual void build (IndexOracle const &oracle, IndexParams const &params, IndexInfo *info = 0) = 0;
         /// Prune the index

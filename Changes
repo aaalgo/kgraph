@@ -1,0 +1,6 @@
+2016-06-02:
+	Changin file format.
+	Original: MAGIC, VERSION_MAJOR (2), VERSION_MINOR (0)
+	Chaning to VERSION_MAJOR only, renamed as SIGNATURE_VERSION
+	Using VERSION_MINOR to denote file capabiliy (SIGNATURE_CAP), which defaults to 0
+	and is compatible to original scheme.
