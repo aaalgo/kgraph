@@ -524,50 +524,73 @@ namespace kgraph {
         }
 
         void prune2 () {
-#if 0
-            vector<vector<unsigned>> new_graph(graph.size());
-            vector<unsigned> new_M(graph.size());
-            vector<vector<unsigned>> reverse(graph.size());
-            vector<unordered_set<unsigned>> todo(graph.size());
+            vector<vector<unsigned>> reverse(graph.size()); // reverse of new graph
+            vector<unsigned> new_L(graph.size(), 0);
             unsigned L = 0;
-            {
-                cerr << "Level 2 Prune, stage 1/2 ..." << endl;
-                progress_display progress(graph.size(), cerr);
-                for (unsigned i = 0; i < graph.size(); ++i) {
-                    if (graph[i].size() > L) L = graph[i].size();
-                    todo[i] = unordered_set<unsigned>(graph[i].begin(), graph[i].end());
-                    ++progress;
+            unsigned total = 0;
+            for (unsigned i = 0; i < graph.size(); ++i) {
+                if (M[i] > L) L = M[i];
+                total += M[i];
+                for (auto &e: graph[i]) {
+                    e.flag = false;             // haven't been visited yet
                 }
             }
-            {
-                cerr << "Level 2 Prune, stage 2/2 ..." << endl;
-                progress_display progress(L, cerr);
-                for (unsigned l = 0; l < L; ++l) {
-                    for (unsigned i = 0; i < graph.size(); ++i) {
-                        if (todo[i].empty()) continue;
-                        BOOST_VERIFY(l < graph[i].size());
-                        unsigned T = graph[i][l];
-                        if (todo[i].erase(T)) { // still there, need to be added
-                            new_graph[i].push_back(T);
-                            reverse[T].push_back(i);
-                            // mark newly reachable nodes
-                            for (auto n2: new_graph[T]) {
-                                todo[i].erase(n2);
+            progress_display progress(total, cerr);
+            vector<unsigned> todo(graph.size());
+            for (unsigned i = 0; i < todo.size(); ++i) todo[i] = i;
+            vector<unsigned> new_todo(graph.size());
+            for (unsigned l = 0; todo.size(); ++l) {
+                BOOST_VERIFY(l <= L);
+                new_todo.clear();
+                for (unsigned i: todo) {
+                    if (l >= M[i]) continue;
+                    new_todo.push_back(i);
+                    auto &v = graph[i];
+                    BOOST_VERIFY(l < v.size());
+                    if (v[l].flag) continue; // we have visited this one already
+                    v[l].flag = true;        // now we have seen this one
+                    ++progress;
+                    unsigned T;
+                    {
+                        auto &nl = new_L[i];
+                        // shift the entry to add
+                        T = v[nl].id = v[l].id;
+                        v[nl].dist = v[l].dist;
+                        ++nl;
+                    }
+                    reverse[T].push_back(i);
+                    {
+                        auto const &u = graph[T];
+                        for (unsigned ll = l + 1; ll < M[i]; ++ll) {
+                            if (v[ll].flag) continue;
+                            for (unsigned j = 0; j < new_L[T]; ++j) { // new graph
+                                if (v[ll].id == u[j].id) {
+                                    v[ll].flag = true;
+                                    ++progress;
+                                    break;
+                                }
                             }
-                            for (auto r: reverse[i]) {
-                                todo[r].erase(T);
-                            }
-                        }
-                        if (l + 1 == M[i]) {
-                            new_M[i] = new_graph[i].size();
                         }
                     }
-                    ++progress;
+                    {
+                        for (auto r: reverse[i]) {
+                            auto &u = graph[r];
+                            for (unsigned ll = l; ll < M[r]; ++ll) {
+                                // must start from l: as item l might not have been checked
+                                // for reverse
+                                if (u[ll].id == T) {
+                                    if (!u[ll].flag) ++progress;
+                                    u[ll].flag = true;
+                                }
+                            }
+                        }
+                    }
                 }
+                todo.swap(new_todo);
             }
-            graph.swap(new_graph);
-            M.swap(new_M);
-#endif
+            BOOST_VERIFY(progress.count() == total);
+            M.swap(new_L);
+            prune1();
         }
 
         virtual void prune (IndexOracle const &oracle, unsigned level) {

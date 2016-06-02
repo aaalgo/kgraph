@@ -5,7 +5,7 @@ OPENMP=-fopenmp
 VERSION=$(shell git describe --always)
 BUILD_INFO=-DKGRAPH_VERSION=\"$(VERSION)\" -DKGRAPH_BUILD_ID=\"$(BUILD_ID)\" -DKGRAPH_BUILD_NUMBER=\"$(BUILD_NUMBER)\"
 CXXFLAGS+=$(BUILD_INFO) -fPIC -Wall -g -std=c++11 -I. $(OPENMP) $(OPT) $(ARCH) 
-LDFLAGS+=$(OPENMP)
+LDFLAGS+=$(OPENMP) -static
 LDLIBS+=-lboost_timer -lboost_chrono -lboost_system -lboost_program_options -lgomp -lm -lrt
 FLANN_LIBS+=-lflann_cpp_s -lflann_s
 NABO_LIBS+=-lnabo

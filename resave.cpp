@@ -21,16 +21,36 @@ using namespace kgraph;
 
 namespace po = boost::program_options; 
 
+class DummyIndexOracle: public IndexOracle {
+public:
+    /// Returns the size of the dataset.
+    virtual unsigned size () const {
+        throw 0;
+        return 0;
+    }
+    /// Computes similarity
+    /**
+     * 0 <= i, j < size() are the index of two objects in the dataset.
+     * This method return the distance between objects i and j.
+     */
+    virtual float operator () (unsigned i, unsigned j) const {
+        throw 0;
+        return 0;
+    }
+};
+
 int main (int argc, char *argv[]) {
     string input_path;
     string output_path;
     int format = 0;
+    int prune = 0;
 
     po::options_description desc("General options");
     desc.add_options()
     ("help,h", "produce help message.")
     ("input", po::value(&input_path), "")
     ("output", po::value(&output_path), "")
+    ("prune", po::value(&prune), "")
     ("no-dist", "")
     ;
 
@@ -51,6 +71,10 @@ int main (int argc, char *argv[]) {
 
     KGraph *kgraph = kgraph::KGraph::create();
     kgraph->load(input_path.c_str());
+    if (vm.count("prune")) {
+        DummyIndexOracle o;
+        kgraph->prune(o, prune);
+    }
 
     if (vm.count("output")) {
         kgraph->save(output_path.c_str(), format);
