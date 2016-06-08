@@ -12,6 +12,9 @@
 #include <cctype>
 #include <type_traits>
 #include <iostream>
+#define timer timer_for_boost_progress_t
+#include <boost/progress.hpp>
+#undef timer
 #include <boost/timer/timer.hpp>
 #include <boost/program_options.hpp>
 #include <kgraph.h>
@@ -105,9 +108,12 @@ int main (int argc, char *argv[]) {
     if (vm.count("linear")) {
         boost::timer::auto_cpu_timer timer;
         result.resize(query.size(), K);
+        boost::progress_display progress(query.size(), cerr);
 #pragma omp parallel for
         for (unsigned i = 0; i < query.size(); ++i) {
             oracle.query(query[i]).search(K, default_epsilon, result[i]);
+#pragma omp critical
+            ++progress;
         }
         cost = 1.0;
         time = timer.elapsed().wall / 1e9;
@@ -125,10 +131,13 @@ int main (int argc, char *argv[]) {
         boost::timer::auto_cpu_timer timer;
         cerr << "Searching..." << endl;
 
+        boost::progress_display progress(query.size(), cerr);
 #pragma omp parallel for reduction(+:cost)
         for (unsigned i = 0; i < query.size(); ++i) {
             KGraph::SearchInfo info;
             kgraph->search(oracle.query(query[i]), params, result[i], &info);
+#pragma omp critical
+            ++progress;
             cost += info.cost;
         }
         cost /= query.size();
