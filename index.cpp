@@ -65,6 +65,7 @@ int main (int argc, char *argv[]) {
     ("gap", po::value(&gap)->default_value(0), "see format")
     ("raw", "read raw binary file, need to specify D.")
     ("synthetic", po::value(&synthetic)->default_value(0), "generate synthetic data, for performance evaluation only, specify number of points")
+    ("l2norm", "l2-normalize data, so as to mimic cosine similarity")
     ;
 
     po::options_description desc("Allowed options");
@@ -156,6 +157,10 @@ int main (int argc, char *argv[]) {
                 data[i][j] += gaussian(rng);
             }
         }
+    }
+    if (vm.count("l2norm")) {
+        cerr << "L2-normalizing data..." << endl;
+        data.normalize2();
     }
 
     MatrixOracle<value_type, metric::l2sqr> oracle(data);

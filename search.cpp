@@ -49,6 +49,7 @@ int main (int argc, char *argv[]) {
     (",P", po::value(&P)->default_value(default_P), "")
     (",T", po::value(&T)->default_value(default_T), "")
     ("linear", "")
+    ("l2norm", "l2-normalize data, so as to mimic cosine similarity")
     ;
 
     po::options_description desc("Allowed options");
@@ -91,6 +92,11 @@ int main (int argc, char *argv[]) {
         BOOST_VERIFY(result.size() == query.size());
         init = result.dim();
         BOOST_VERIFY(init >= K);
+    }
+    if (vm.count("l2norm")) {
+        cerr << "L2-normalizing data..." << endl;
+        data.normalize2();
+        query.normalize2();
     }
     MatrixOracle<value_type, metric::l2sqr> oracle(data);
     float recall = 0;

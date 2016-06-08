@@ -1,6 +1,7 @@
 #ifndef WDONG_KGRAPH_DATA
 #define WDONG_KGRAPH_DATA
 
+#include <cmath>
 #include <cstring>
 #include <malloc.h>
 #include <vector>
@@ -133,6 +134,19 @@ namespace kgraph {
         void zero () {
             memset(data, 0, row * stride);
         }
+
+        void normalize2 () {
+#pragma omp parallel for
+            for (unsigned i = 0; i < row; ++i) {
+                T *p = operator[](i);
+                double sum = metric::l2sqr::norm2(p, col);
+                sum = std::sqrt(sum);
+                for (unsigned j = 0; j < col; ++j) {
+                    p[j] /= sum;
+                }
+            }
+        }
+        
         void load (const std::string &path, unsigned dim, unsigned skip = 0, unsigned gap = 0) {
             std::ifstream is(path.c_str(), std::ios::binary);
             BOOST_VERIFY(is);
