@@ -2,8 +2,8 @@ CC = g++
 PYTHON_VERSION = 2.7
 PYTHON_INCLUDE = /usr/include/python$(PYTHON_VERSION)
 CXXFLAGS = -O3 -fopenmp -g -fPIC -std=c++11 -I$(PYTHON_INCLUDE) -I..
-LDFLAGS = -L../bin 
-LDLIBS = ../libkgraph.a -lboost_python -lboost_timer -lboost_chrono -lpython$(PYTHON_VERSION) -lgomp
+LDFLAGS = -L../bin -L..
+LDLIBS = -lkgraph -lboost_python -lboost_timer -lboost_chrono -lpython$(PYTHON_VERSION) -lgomp
 
 #ifeq (${BLAS}, false)
 #else
