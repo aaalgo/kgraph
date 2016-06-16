@@ -7,8 +7,9 @@ GIT_VERSION = subprocess.check_output("git describe --always", shell=True)
 pykgraph = Extension('pykgraph',
         language = 'c++',
         extra_compile_args = ['-O3', '-std=c++11', '-msse2', '-fopenmp', '-DKGRAPH_VERSION=%s' % GIT_VERSION],
-        include_dirs = ['/usr/local/include', '.'],
-        libraries = ['boost_python', 'boost_timer', 'boost_chrono', 'gomp'],
+        extra_link_args = ['-fopenmp'],
+        include_dirs = ['.'],
+        libraries = ['boost_python', 'boost_timer'],
         sources = ['kgraph.cpp', 'metric.cpp', 'python/pykgraph.cpp'],
         depends = ['kgraph.h', 'kgraph-data.h'])
 
