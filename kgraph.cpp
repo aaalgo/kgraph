@@ -1,4 +1,15 @@
-static char const *kgraph_version = KGRAPH_VERSION "-" KGRAPH_BUILD_NUMBER "," KGRAPH_BUILD_ID;
+#ifndef KGRAPH_VERSION
+#define KGRAPH_VERSION unknown
+#endif
+#ifndef KGRAPH_BUILD_NUMBER
+#define KGRAPH_BUILD_NUMBER 
+#endif
+#ifndef KGRAPH_BUILD_ID
+#define KGRAPH_BUILD_ID
+#endif
+#define STRINGIFY(x) STRINGIFY_HELPER(x)
+#define STRINGIFY_HELPER(x) #x
+static char const *kgraph_version = STRINGIFY(KGRAPH_VERSION) "-" STRINGIFY(KGRAPH_BUILD_NUMBER) "," STRINGIFY(KGRAPH_BUILD_ID);
 
 #include <omp.h>
 #include <unordered_set>

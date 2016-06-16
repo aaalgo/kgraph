@@ -398,7 +398,8 @@ public:
                unsigned controls,
                float delta,
                float recall,
-               unsigned prune) {
+               unsigned prune,
+               int reverse) {
         IndexParams params;
         params.iterations = iterations;
         params.L = L;
@@ -408,6 +409,7 @@ public:
         params.delta = delta;
         params.recall = recall;
         params.prune = prune;
+        params.reverse = reverse;
         impl->build(params);
         /*
         PyArrayObject *pd = reinterpret_cast<PyArrayObject *>(data.ptr());
@@ -457,7 +459,8 @@ BOOST_PYTHON_MODULE(pykgraph)
               python::arg("controls") = kgraph::default_controls,
               python::arg("delta") = kgraph::default_delta,
               python::arg("recall") = kgraph::default_recall,
-              python::arg("prune") = kgraph::default_prune))
+              python::arg("prune") = kgraph::default_prune,
+              python::arg("reverse") = kgraph::default_reverse))
         .def("search", &KGraph::search,
             (python::arg("data"),
              python::arg("query"),
@@ -470,6 +473,7 @@ BOOST_PYTHON_MODULE(pykgraph)
              python::arg("blas") = false))
         ;
     python::def("load_lshkit", ::load_lshkit);
+    python::def("version", kgraph::KGraph::version);
 }
 
 
