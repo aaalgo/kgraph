@@ -1,3 +1,25 @@
+2016-06-16:
+        Enabling edge reversing for better search performance.
+        The original index is the exact k-NN graph, and has
+        difficulties to reach very high recall (>0.98) for some
+        difficult datasets.  The problem is that the k-NN graph
+        is a directed graph and k is the out-digree.  That means
+        the in-digree of a node might have very high variance.
+        If a node happen to have 0 in-dgree, then it's not
+        possible to reach this node in graph-based search process.
+        The idea of edge reversing is to add the reverse edges
+        to the original graph for the index.  A new parameter
+        IndexParams::reverse is introduced and has the following
+        meaning:
+                 0 :  (default) do not add reverse edges.
+                -1 :  add reverse edges automatically using M values.
+                k>0:  trim the graph into a k-NN graph and add all
+                      the reverse edges.
+        All source code using KGraph should be backward compatible,
+        with a default value of IndexParams::reverse set to 0.
+        For the purpose of index construction, it is recommend that
+        the value be set to -1.
+
 2016-06-02:
 	Changin file format.
 	Original: MAGIC, VERSION_MAJOR (2), VERSION_MINOR (0)
