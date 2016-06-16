@@ -27,7 +27,12 @@ namespace kgraph {
         PRUNE_LEVEL_1 = 1,
         PRUNE_LEVEL_2 = 2
     };
+    enum {
+        REVERSE_AUTO = -1,
+        REVERSE_NONE = 0,
+    };
     static unsigned const default_prune = 0;
+    static int const default_reverse = REVERSE_NONE;
 
     /// Verbosity control
     /** Set verbosity = 0 to disable information output to stderr.
@@ -95,9 +100,10 @@ namespace kgraph {
             float delta;
             float recall;
             unsigned prune;
+            int reverse;
 
             /// Construct with default values.
-            IndexParams (): iterations(default_iterations), L(default_L), K(default_K), S(default_S), R(default_R), controls(default_controls), seed(default_seed), delta(default_delta), recall(default_recall), prune(default_prune) {
+            IndexParams (): iterations(default_iterations), L(default_L), K(default_K), S(default_S), R(default_R), controls(default_controls), seed(default_seed), delta(default_delta), recall(default_recall), prune(default_prune), reverse(default_reverse) {
             }
         };
 

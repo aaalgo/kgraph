@@ -61,6 +61,10 @@ namespace kgraph {
         return n1.dist < n2.dist;
     }
 
+    static inline bool operator == (Neighbor const &n1, Neighbor const &n2) {
+        return n1.id == n2.id;
+    }
+
     typedef vector<Neighbor> Neighbors;
 
     // both pool and knn should be sorted in ascending order
@@ -241,6 +245,46 @@ namespace kgraph {
         vector<vector<Neighbor>> graph;
         bool no_dist;   // Distance & flag information in Neighbor is not valid.
 
+        void reverse (int rev_k) {
+            if (rev_k == 0) return;
+            if (no_dist) throw runtime_error("Need distance information to reverse graph");
+            vector<vector<Neighbor>> ng; // new graph adds on original one
+            {
+                cerr << "Graph completion with reverse edges..." << endl;
+                ng = graph;
+                progress_display progress(graph.size(), cerr);
+                for (unsigned i = 0; i < graph.size(); ++i) {
+                    auto const &v = graph[i];
+                    unsigned K = M[i];
+                    if (rev_k > 0) {
+                        K = rev_k;
+                        if (K > v.size()) K = v.size();
+                    }
+                    //if (v.size() < XX) XX = v.size();
+                    for (unsigned j = 0; j < K; ++j) {
+                        auto const &e = v[j];
+                        auto re = e;
+                        re.id = i;
+                        ng[e.id].push_back(re);
+                    }
+                    ++progress;
+                }
+                graph.swap(ng);
+            }
+            {
+                cerr << "Reranking edges..." << endl;
+                progress_display progress(graph.size(), cerr);
+#pragma omp parallel for
+                for (unsigned i = 0; i < graph.size(); ++i) {
+                    auto &v = graph[i];
+                    std::sort(v.begin(), v.end());
+                    v.resize(std::unique(v.begin(), v.end()) - v.begin());
+                    M[i] = v.size();
+#pragma omp critical
+                    ++progress;
+                }
+            }
+        }
     public:
         virtual ~KGraphImpl () {
         }
@@ -522,6 +566,7 @@ namespace kgraph {
                 }
             }
         }
+
 
         void prune2 () {
             vector<vector<unsigned>> reverse(graph.size()); // reverse of new graph
@@ -874,6 +919,9 @@ public:
                     knn[k].id = pool[k].id;
                     knn[k].dist = pool[k].dist;
                 }
+            }
+            if (params.reverse) {
+                reverse(params.reverse);
             }
             if (params.prune) {
                 prune(o, params.prune);

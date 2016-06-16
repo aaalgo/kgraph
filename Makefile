@@ -14,7 +14,7 @@ NABO_LIBS+=-lnabo
 
 COMMON=kgraph.o metric.o
 HEADERS=kgraph.h kgraph-data.h 
-PROGS=resave index search prune split fvec2lshkit txt2lshkit
+PROGS=resave index search prune split fvec2lshkit txt2lshkit reverse
 EXTRA_PROGS=test 
 FLANN_PROGS=flann_index flann_search
 NABO_PROGS=nabo_search

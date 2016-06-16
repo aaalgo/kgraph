@@ -58,6 +58,7 @@ int main (int argc, char *argv[]) {
     ("delta", po::value(&params.delta)->default_value(default_delta), "")
     ("recall", po::value(&params.recall)->default_value(default_recall), "")
     ("prune", po::value(&params.prune)->default_value(default_prune), "")
+    ("reverse", po::value(&params.reverse)->default_value(default_reverse), "")
     ("noise", po::value(&noise)->default_value(0), "noise")
     ("seed", po::value(&params.seed)->default_value(default_seed), "")
     ("dim,D", po::value(&D), "dimension, see format")
