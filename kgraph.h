@@ -112,13 +112,14 @@ namespace kgraph {
             unsigned K;
             unsigned M;
             unsigned P;
+            unsigned S;
             unsigned T;
             float epsilon;
             unsigned seed;
             unsigned init;
 
             /// Construct with default values.
-            SearchParams (): K(default_K), M(default_M), P(default_P), T(default_T), epsilon(default_epsilon), seed(1998), init(0) {
+            SearchParams (): K(default_K), M(default_M), P(default_P), S(default_S), T(default_T), epsilon(default_epsilon), seed(1998), init(0) {
             }
         };
 
@@ -219,6 +220,8 @@ namespace kgraph {
          * @params L Actually returned number of neighbors, output only.
          */
         virtual void get_nn (unsigned id, unsigned *nns, float *dists, unsigned *M, unsigned *L) const = 0;
+
+        virtual void reverse (int) = 0;
     };
 }
 

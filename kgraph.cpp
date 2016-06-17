@@ -68,6 +68,15 @@ namespace kgraph {
         }
     };
 
+    // extended neighbor structure for search time
+    struct NeighborX: public Neighbor {
+        uint16_t m;
+        uint16_t M; // actual M used
+        NeighborX () {}
+        NeighborX (unsigned i, float d): Neighbor(i, d, true), m(0), M(0) {
+        }
+    };
+
     static inline bool operator < (Neighbor const &n1, Neighbor const &n2) {
         return n1.dist < n2.dist;
     }
@@ -159,7 +168,8 @@ namespace kgraph {
     // Special case:  K == 0
     //      addr[0] <- nn
     //      return 0
-    static inline unsigned UpdateKnnList (Neighbor *addr, unsigned K, Neighbor nn) {
+    template <typename NeighborT>
+    unsigned UpdateKnnListHelper (NeighborT *addr, unsigned K, NeighborT nn) {
         // find the location to insert
         unsigned j;
         unsigned i = K;
@@ -184,6 +194,14 @@ namespace kgraph {
         }
         addr[i] = nn;
         return i;
+    }
+
+    static inline unsigned UpdateKnnList (Neighbor *addr, unsigned K, Neighbor nn) {
+        return UpdateKnnListHelper<Neighbor>(addr, K, nn);
+    }
+
+    static inline unsigned UpdateKnnList (NeighborX *addr, unsigned K, NeighborX nn) {
+        return UpdateKnnListHelper<NeighborX>(addr, K, nn);
     }
 
     void LinearSearch (IndexOracle const &oracle, unsigned i, unsigned K, vector<Neighbor> *pnns) {
@@ -256,46 +274,12 @@ namespace kgraph {
         vector<vector<Neighbor>> graph;
         bool no_dist;   // Distance & flag information in Neighbor is not valid.
 
-        void reverse (int rev_k) {
-            if (rev_k == 0) return;
-            if (no_dist) throw runtime_error("Need distance information to reverse graph");
-            vector<vector<Neighbor>> ng; // new graph adds on original one
-            {
-                cerr << "Graph completion with reverse edges..." << endl;
-                ng = graph;
-                progress_display progress(graph.size(), cerr);
-                for (unsigned i = 0; i < graph.size(); ++i) {
-                    auto const &v = graph[i];
-                    unsigned K = M[i];
-                    if (rev_k > 0) {
-                        K = rev_k;
-                        if (K > v.size()) K = v.size();
-                    }
-                    //if (v.size() < XX) XX = v.size();
-                    for (unsigned j = 0; j < K; ++j) {
-                        auto const &e = v[j];
-                        auto re = e;
-                        re.id = i;
-                        ng[e.id].push_back(re);
-                    }
-                    ++progress;
-                }
-                graph.swap(ng);
-            }
-            {
-                cerr << "Reranking edges..." << endl;
-                progress_display progress(graph.size(), cerr);
-#pragma omp parallel for
-                for (unsigned i = 0; i < graph.size(); ++i) {
-                    auto &v = graph[i];
-                    std::sort(v.begin(), v.end());
-                    v.resize(std::unique(v.begin(), v.end()) - v.begin());
-                    M[i] = v.size();
-#pragma omp critical
-                    ++progress;
-                }
-            }
+
+        // actual M for a node that should be used in search time
+        unsigned actual_M (unsigned pM, unsigned i) const {
+            return std::min(std::max(M[i], pM), unsigned(graph[i].size()));
         }
+
     public:
         virtual ~KGraphImpl () {
         }
@@ -427,8 +411,10 @@ namespace kgraph {
                 }
                 return oracle.search(params.K, params.epsilon, ids, dists);
             }
-            vector<Neighbor> knn(params.K + params.P +1);
-            vector<Neighbor> results;
+            vector<NeighborX> knn(params.K + params.P +1);
+            vector<NeighborX> results;
+            // flags access is totally random, so use small block to avoid
+            // extra memory access
             boost::dynamic_bitset<> flags(graph.size(), false);
 
             if (params.init && params.T > 1) {
@@ -460,47 +446,50 @@ namespace kgraph {
                     }
                 }
                 for (unsigned k = 0; k < L; ++k) {
-                    flags[knn[k].id] = true;
-                    knn[k].flag = true;
-                    knn[k].dist = oracle(knn[k].id);
+                    auto &e = knn[k];
+                    flags[e.id] = true;
+                    e.flag = true;
+                    e.dist = oracle(e.id);
+                    e.m = 0;
+                    e.M = actual_M(params.M, e.id);
                 }
                 sort(knn.begin(), knn.begin() + L);
 
                 unsigned k =  0;
                 while (k < L) {
-                    unsigned nk = L;
-                    if (knn[k].flag) {
-                        knn[k].flag = false;
-                        unsigned cur = knn[k].id;
-                        //BOOST_VERIFY(cur < graph.size());
-                        unsigned maxM = M[cur];
-                        if (params.M > maxM) maxM = params.M;
-                        auto const &neighbors = graph[cur];
-                        if (maxM > neighbors.size()) {
-                            maxM = neighbors.size();
-                        }
-                        for (unsigned m = 0; m < maxM; ++m) {
-                            unsigned id = neighbors[m].id;
-                            //BOOST_VERIFY(id < graph.size());
-                            if (flags[id]) continue;
-                            flags[id] = true;
-                            ++n_comps;
-                            float dist = oracle(id);
-                            Neighbor nn(id, dist);
-                            unsigned r = UpdateKnnList(&knn[0], L, nn);
-                            BOOST_VERIFY(r <= L);
-                            //if (r > L) continue;
-                            if (L + 1 < knn.size()) ++L;
-                            if (r < nk) {
-                                nk = r;
+                    auto &e = knn[k];
+                    if (!e.flag) { // all neighbors of this node checked
+                        ++k;
+                        continue;
+                    }
+                    unsigned beginM = e.m;
+                    unsigned endM = beginM + params.S; // check this many entries
+                    if (endM > e.M) {   // we are done with this node
+                        e.flag = false;
+                        endM = e.M;
+                    }
+                    e.m = endM;
+                    // all modification to knn[k] must have been done now,
+                    // as we might be relocating knn[k] in the loop below
+                    auto const &neighbors = graph[e.id];
+                    for (unsigned m = beginM; m < endM; ++m) {
+                        unsigned id = neighbors[m].id;
+                        //BOOST_VERIFY(id < graph.size());
+                        if (flags[id]) continue;
+                        flags[id] = true;
+                        ++n_comps;
+                        float dist = oracle(id);
+                        NeighborX nn(id, dist);
+                        unsigned r = UpdateKnnList(&knn[0], L, nn);
+                        BOOST_VERIFY(r <= L);
+                        //if (r > L) continue;
+                        if (L + 1 < knn.size()) ++L;
+                        if (r < L) {
+                            knn[r].M = actual_M(params.M, id);
+                            if (r < k) {
+                                k = r;
                             }
                         }
-                    }
-                    if (nk <= k) {
-                        k = nk;
-                    }
-                    else {
-                        ++k;
                     }
                 }
                 if (L > params.K) L = params.K;
@@ -655,6 +644,48 @@ namespace kgraph {
             }
             if (level & PRUNE_LEVEL_2) {
                 prune2();
+            }
+        }
+
+        void reverse (int rev_k) {
+            if (rev_k == 0) return;
+            if (no_dist) throw runtime_error("Need distance information to reverse graph");
+            {
+                cerr << "Graph completion with reverse edges..." << endl;
+                vector<vector<Neighbor>> ng(graph.size()); // new graph adds on original one
+                //ng = graph;
+                progress_display progress(graph.size(), cerr);
+                for (unsigned i = 0; i < graph.size(); ++i) {
+                    auto const &v = graph[i];
+                    unsigned K = M[i];
+                    if (rev_k > 0) {
+                        K = rev_k;
+                        if (K > v.size()) K = v.size();
+                    }
+                    //if (v.size() < XX) XX = v.size();
+                    for (unsigned j = 0; j < K; ++j) {
+                        auto const &e = v[j];
+                        auto re = e;
+                        re.id = i;
+                        ng[i].push_back(e);
+                        ng[e.id].push_back(re);
+                    }
+                    ++progress;
+                }
+                graph.swap(ng);
+            }
+            {
+                cerr << "Reranking edges..." << endl;
+                progress_display progress(graph.size(), cerr);
+#pragma omp parallel for
+                for (unsigned i = 0; i < graph.size(); ++i) {
+                    auto &v = graph[i];
+                    std::sort(v.begin(), v.end());
+                    v.resize(std::unique(v.begin(), v.end()) - v.begin());
+                    M[i] = v.size();
+#pragma omp critical
+                    ++progress;
+                }
             }
         }
     };

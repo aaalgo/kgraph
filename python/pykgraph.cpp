@@ -424,6 +424,7 @@ public:
                 unsigned K,
                 unsigned P,
                 unsigned M,
+                unsigned S,
                 unsigned T,
                 unsigned threads,
                 bool withDistance,
@@ -432,6 +433,7 @@ public:
         params.K = K;
         params.P = P;
         params.M = M;
+        params.S = S;
         params.T = T;
         params.threads = threads;
         params.withDistance = withDistance;
@@ -467,6 +469,7 @@ BOOST_PYTHON_MODULE(pykgraph)
              python::arg("K") = kgraph::default_K,
              python::arg("P") = kgraph::default_P,
              python::arg("M") = kgraph::default_M,
+             python::arg("S") = kgraph::default_S,
              python::arg("T") = kgraph::default_T,
              python::arg("threads") = 0,
              python::arg("withDistance") = false,

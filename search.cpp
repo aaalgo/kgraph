@@ -35,7 +35,7 @@ int main (int argc, char *argv[]) {
     string output_path;
     string init_path;
     string eval_path;
-    unsigned K, M, P, T;
+    unsigned K, M, P, S, T;
 
     po::options_description desc_visible("General options");
     desc_visible.add_options()
@@ -50,6 +50,7 @@ int main (int argc, char *argv[]) {
     (",K", po::value(&K)->default_value(default_K), "")
     (",M", po::value(&M)->default_value(default_M), "")
     (",P", po::value(&P)->default_value(default_P), "")
+    (",S", po::value(&S)->default_value(default_S), "")
     (",T", po::value(&T)->default_value(default_T), "")
     ("linear", "")
     ("l2norm", "l2-normalize data, so as to mimic cosine similarity")
@@ -106,17 +107,19 @@ int main (int argc, char *argv[]) {
     float cost = 0;
     float time = 0;
     if (vm.count("linear")) {
-        boost::timer::auto_cpu_timer timer;
         result.resize(query.size(), K);
         boost::progress_display progress(query.size(), cerr);
+        {   // to ensure auto_cpu_timer destruct before "time" computation
+            boost::timer::auto_cpu_timer timer;
 #pragma omp parallel for
-        for (unsigned i = 0; i < query.size(); ++i) {
-            oracle.query(query[i]).search(K, default_epsilon, result[i]);
+            for (unsigned i = 0; i < query.size(); ++i) {
+                oracle.query(query[i]).search(K, default_epsilon, result[i]);
 #pragma omp critical
-            ++progress;
+                ++progress;
+            }
+            time = timer.elapsed().wall / 1e9;
         }
         cost = 1.0;
-        time = timer.elapsed().wall / 1e9;
     }
     else {
         result.resize(query.size(), K);
@@ -124,24 +127,26 @@ int main (int argc, char *argv[]) {
         params.K = K;
         params.M = M;
         params.P = P;
+        params.S = S;
         params.T = T;
         params.init = init;
         KGraph *kgraph = KGraph::create();
         kgraph->load(index_path.c_str());
-        boost::timer::auto_cpu_timer timer;
         cerr << "Searching..." << endl;
-
         boost::progress_display progress(query.size(), cerr);
+        {
+            boost::timer::auto_cpu_timer timer;
 #pragma omp parallel for reduction(+:cost)
-        for (unsigned i = 0; i < query.size(); ++i) {
-            KGraph::SearchInfo info;
-            kgraph->search(oracle.query(query[i]), params, result[i], &info);
+            for (unsigned i = 0; i < query.size(); ++i) {
+                KGraph::SearchInfo info;
+                kgraph->search(oracle.query(query[i]), params, result[i], &info);
 #pragma omp critical
-            ++progress;
-            cost += info.cost;
+                ++progress;
+                cost += info.cost;
+            }
+            time = timer.elapsed().wall / 1e9;
         }
         cost /= query.size();
-        time = timer.elapsed().wall / 1e9;
         //cerr << "Cost: " << cost << endl;
         delete kgraph;
     }
