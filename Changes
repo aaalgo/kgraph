@@ -1,3 +1,22 @@
+2016-06-17:
+	Adding a parameter SearchParams::S which is the online
+	equivalence of IndexParams::S.  At search time, all
+	neighbors or a neighbor are visited at the same time
+	in the original algorithm.  With the new behavior,
+	neighbors are visited in batches of SearchParams::S.
+	Example:
+	k-NN working list:	a b c d e [f] g 
+					   |
+					   [l m n] o p q
+	we are at entry f, and visiting it's first batch of
+        neighbors l, m and n.  Suppose m and n are actually
+	better than f and g, the working space will become
+				a b c d e [m] n
+	We'll then directly move on to check m's neighbors,
+	as apposed to finish checking f's neighbors o p and q.
+	Default is set to default_s = 10 which is the same for
+	IndexParams::S.
+
 2016-06-16:
         Enabling edge reversing for better search performance.
         The original index is the exact k-NN graph, and has
