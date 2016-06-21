@@ -98,7 +98,7 @@ namespace {
         vector<float> n2;
     public:
         class SearchOracle: public kgraph::SearchOracle {
-            kgraph::MatrixProxy<DATA_TYPE> const &proxy;
+            kgraph::MatrixProxy<DATA_TYPE> proxy;
             float const *proxy_n2;
             DATA_TYPE const *query;
             float n2;
