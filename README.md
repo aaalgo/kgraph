@@ -79,17 +79,17 @@ two abstract classes
 ```cpp
     class IndexOracle {
     public:
-        // returns size of dataset
+        // returns size N of dataset
         virtual unsigned size () const = 0;
-        // computes similarity of object i and j
+        // computes similarity of object 0 <= i and j < N
         virtual float operator () (unsigned i, unsigned j) const = 0;
     };
 
     class SearchOracle {
     public:
-        /// Returns the size of the dataset.
+        /// Returns the size N of the dataset.
         virtual unsigned size () const = 0;
-	/// Computes similarity of query and object i.
+	/// Computes similarity of query and object 0 <= i < N.
         virtual float operator () (unsigned i) const = 0;
     };
 ```
@@ -129,6 +129,10 @@ index->search(oracle, params, &knn[0]);
 
 delete index;
 ```
+
+Note that the search API does not directly imply nearest neighbor search.  Rather
+it is a generic API for minimizing a function on top of a graph, and finds the K
+nodes where the function assumes minimal values.
 
 # More Documentation
 ### Oracles for Common Tasks
