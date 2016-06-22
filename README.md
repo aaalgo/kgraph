@@ -19,10 +19,15 @@ and Angular distances on rows of NumPy matrices.
 
 # Building and Installation
 
-KGraph depends on a recent version of GCC with C++11 support, and the 
-Boost library.  A Makefile is provided which produces libkgraph.a,
-libkgraph.so and a few utility functions.  To install, copy *.h to
-files to /usr/local/include and libkgraph.* to /usr/local/lib.
+KGraph depends on a recent version of GCC with C++11 support, cmake
+and the Boost library.  The package can be built and installed with
+```sh
+cmake -DCMAKE_BUILD_TYPE=release .
+make
+sudo make install
+```
+
+A Makefile.plain is also provided in case cmake is not available.
 
 The Python API can be installed with
 ```
@@ -115,7 +120,7 @@ index->search(oracle, params, &knn[0]);
 
 delete index;
 ```
-
+[Doxygen documentation](http://aaalgo.github.io/kgraph/doc/html/annotated.html)
 
 http://www.kgraph.org/
 

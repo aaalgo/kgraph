@@ -46,6 +46,7 @@ namespace kgraph {
         /// L2 square distance.
         struct l2sqr {
             template <typename T>
+            /// L2 square distance.
             static float apply (T const *t1, T const *t2, unsigned dim) {
                 float r = 0;
                 for (unsigned i = 0; i < dim; ++i) {
@@ -56,6 +57,7 @@ namespace kgraph {
                 return r;
             }
 
+            /// inner product.
             template <typename T>
             static float dot (T const *t1, T const *t2, unsigned dim) {
                 float r = 0;
@@ -65,6 +67,7 @@ namespace kgraph {
                 return r;
             }
 
+            /// L2 norm.
             template <typename T>
             static float norm2 (T const *t1, unsigned dim) {
                 float r = 0;
