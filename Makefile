@@ -7,7 +7,7 @@ BUILD_INFO=-DKGRAPH_VERSION=$(VERSION) -DKGRAPH_BUILD_ID=$(BUILD_ID) -DKGRAPH_BU
 CXXFLAGS+=$(BUILD_INFO) -fPIC -Wall -g -std=c++11 -I. $(OPENMP) $(OPT) $(ARCH) 
 LDFLAGS+=$(OPENMP) -static
 LDLIBS+=-lboost_timer -lboost_chrono -lboost_system -lboost_program_options -lgomp -lm -lrt
-FLANN_LIBS+=-lflann_cpp_s -lflann_s
+#FLANN_LIBS+=-lflann_cpp_s -lflann_s
 NABO_LIBS+=-lnabo
 
 .PHONY:	all python clean release deps-ubuntu flann
@@ -16,8 +16,8 @@ COMMON=kgraph.o metric.o
 HEADERS=kgraph.h kgraph-data.h 
 PROGS=resave index search prune split fvec2lshkit txt2lshkit reverse
 EXTRA_PROGS=test 
-FLANN_PROGS=flann_index flann_search
-NABO_PROGS=nabo_search
+#FLANN_PROGS=flann_index flann_search
+#NABO_PROGS=nabo_search
 
 all:	libkgraph.a libkgraph.so $(PROGS) python $(EXTRA_PROGS)
 	echo $(BUILD_INFO)

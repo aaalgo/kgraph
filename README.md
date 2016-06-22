@@ -15,6 +15,8 @@ For best generality, the C++ API should be used.  A python wrapper
 is provided under the module name pykgraph, which supports Euclidean
 and Angular distances on rows of NumPy matrices.
 
+
+
 # Building and Installation
 
 KGraph depends on a recent version of GCC with C++11 support, and the 
@@ -46,19 +48,48 @@ knn = index.search(query, K=10, threads=1)            # one thread, slower
 knn = index.search(query, K=1000, P=100)              # search for 1000-nn, no need to recompute index.
 ```
 
-Both index.build and index.search supports a number of optional keywords arguments to fine tune the performance.
-The default values should work reasonably well for many datasets.  One exception is that reverse=-1 should be added if
-the purpose of building index is to speedup search, which is the typical case, rather than to obtain the
-k-NN graph itself).
+Both index.build and index.search supports a number of optional keywords
+arguments to fine tune the performance.  The default values should work
+reasonably well for many datasets.  One exception is that reverse=-1 should be
+added if the purpose of building index is to speedup search, which is the
+typical case, rather than to obtain the k-NN graph itself.
 
 Two precautions should be taken:
 * Although matrices of both float32 and float64 are supported, the latter is not optimized.  It is recommened that
 matrices be converted to float32 before being passed into kgraph.
 * The dimension (columns of matrices) should be a multiple of 4.  If not, zeros must be padded.
 
+For performance considerations, the Python API does not support user-defined similarity function,
+as the callback function is invoked in such a high frequency that, if written in Python, speedup will
+inevitably be brought down.  For the full generality, the C++ API should be used.
+
 # C++ Quick Start
 
+The KGraph C++ API is based on two central concepts: the index oracle and the search oracle.
+(Oracle is a fancy way of calling a user-defined callback function that behaves like a black box.)
+KGraph works solely with object IDs from 0 to N-1, and relies on the oracles to map the IDs to
+actual data objects and computes the similarity.  To use KGraph, the user has to extend the following
+two abstract classes
+
+```cpp
+    class IndexOracle {
+    public:
+        // returns size of dataset
+        virtual unsigned size () const = 0;
+        // computes similarity of object i and j
+        virtual float operator () (unsigned i, unsigned j) const = 0;
+    };
+
+    class SearchOracle {
+    public:
+        /// Returns the size of the dataset.
+        virtual unsigned size () const = 0;
+	/// Computes similarity of query and object i.
+        virtual float operator () (unsigned i) const = 0;
+    };
+```
 
 
 
 http://www.kgraph.org/
+
