@@ -79,7 +79,7 @@ namespace kgraph {
                 return r;
             }
         };
-        /// L2 distance.
+
         struct l2 {
             template <typename T>
             static float apply (T const *t1, T const *t2, unsigned dim) {
@@ -250,7 +250,7 @@ namespace kgraph {
         }
     };
 
-    /// Oracle for matrix data.
+    /// Oracle for Matrix or MatrixProxy.
     /** DATA_TYPE can be Matrix or MatrixProxy,
     * DIST_TYPE should be one class within the namespace kgraph.metric.
     */
