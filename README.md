@@ -73,7 +73,7 @@ inevitably be brought down.  For the full generality, the C++ API should be used
 The KGraph C++ API is based on two central concepts: the index oracle and the search oracle.
 (Oracle is a fancy way of calling a user-defined callback function that behaves like a black box.)
 KGraph works solely with object IDs from 0 to N-1, and relies on the oracles to map the IDs to
-actual data objects and computes the similarity.  To use KGraph, the user has to extend the following
+actual data objects and to compute the similarity. To use KGraph, the user has to extend the following
 two abstract classes
 
 ```cpp
@@ -93,6 +93,14 @@ two abstract classes
         virtual float operator () (unsigned i) const = 0;
     };
 ```
+
+The similarity values computed by the oracles must satisfy the following two conditions:
+* The more similar the objects are, the smaller the similarity value (0.1 < 10, -10 < 1).
+* Similarity must be symmetric, i.e. f(a, b) = f(b, a).
+
+KGraph's heuristic algorithm does not make assumption about properties such as
+triangle-inequality.  If the similarity is ill-defined, the worst it can do is to lower
+the accuracy and to slow down computation.
 
 With the oracle classes defined, index construction and online search become straightfoward:
 
