@@ -104,7 +104,7 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 </ul>
 <p>For performance considerations, the Python API does not support user-defined similarity function, as the callback function is invoked in such a high frequency that, if written in Python, speedup will inevitably be brought down. For the full generality, the C++ API should be used.</p>
 <h1>C++ Quick Start</h1>
-<p>The KGraph C++ API is based on two central concepts: the index oracle and the search oracle. (<a class="el" href="classOracle.html">Oracle</a> is a fancy way of calling a user-defined callback function that behaves like a black box.) KGraph works solely with object IDs from 0 to N-1, and relies on the oracles to map the IDs to actual data objects and computes the similarity. To use KGraph, the user has to extend the following two abstract classes</p>
+<p>The KGraph C++ API is based on two central concepts: the index oracle and the search oracle. (Oracle is a fancy way of calling a user-defined callback function that behaves like a black box.) KGraph works solely with object IDs from 0 to N-1, and relies on the oracles to map the IDs to actual data objects and computes the similarity. To use KGraph, the user has to extend the following two abstract classes</p>
 <p>```cpp class IndexOracle { public: // returns size of dataset virtual unsigned size () const = 0; // computes similarity of object i and j virtual float operator () (unsigned i, unsigned j) const = 0; };</p>
 <p>class SearchOracle { public: /// Returns the size of the dataset. virtual unsigned size () const = 0; /// Computes similarity of query and object i. virtual float operator () (unsigned i) const = 0; }; ```</p>
 <p>With the oracle classes defined, index construction and online search become straightfoward:</p>
@@ -113,12 +113,12 @@ var searchBox = new SearchBox("searchBox", "search",false,'Search');
 <p>if (need_to_create_new_index) { MyIndexOracle oracle(...); // subclass of <a class="el" href="classkgraph_1_1IndexOracle.html" title="Index oracle. ">kgraph::IndexOracle</a> KGraph::IndexParams params; params.reverse = -1; index-&gt;build(oracle, params); index-&gt;save("some_path"); } else { index-&gt;load("some_path"); }</p>
 <p>MySearchOracle oracle(...); // subclass of <a class="el" href="classkgraph_1_1SearchOracle.html" title="Search oracle. ">kgraph::SearchOracle</a></p>
 <p>KGraph::SearchParams params; params.K = K; vector&lt;unsigned&gt; knn(K); // to save K-NN ids. index-&gt;search(oracle, params, &amp;knn[0]);</p>
-<p>delete index; ```</p>
+<p>delete index; ``` <a href="http://aaalgo.github.io/kgraph/doc/html/annotated.html">Doxygen documentation</a></p>
 <p><a href="http://www.kgraph.org/">http://www.kgraph.org/</a> </p>
 </div></div><!-- contents -->
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
-Generated on Wed Jun 22 2016 13:48:59 for KGraph by &#160;<a href="http://www.doxygen.org/index.html">
+Generated on Wed Jun 22 2016 14:00:10 for KGraph by &#160;<a href="http://www.doxygen.org/index.html">
 <img class="footer" src="doxygen.png" alt="doxygen"/>
 </a> 1.8.5
 </small></address>
