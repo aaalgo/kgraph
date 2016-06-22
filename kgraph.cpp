@@ -44,6 +44,12 @@ namespace kgraph {
     // generate size distinct random numbers < N
     template <typename RNG>
     static void GenRandom (RNG &rng, unsigned *addr, unsigned size, unsigned N) {
+        if (N == size) {
+            for (unsigned i = 0; i < size; ++i) {
+                addr[i] = i;
+            }
+            return;
+        }
         for (unsigned i = 0; i < size; ++i) {
             addr[i] = rng() % (N - size);
         }
@@ -881,6 +887,18 @@ public:
             //params.check();
             unsigned N = oracle.size();
             if (N <= params.K) throw runtime_error("K larger than dataset size");
+            if (N < params.controls) {
+                cerr << "Warning: small dataset, shrinking control size to " << N << "." << endl;
+                params.controls = N;
+            }
+            if (N <= params.L) {
+                cerr << "Warning: small dataset, shrinking L to " << (N-1) << "." << endl;
+                params.L = N - 1; 
+            }
+            if (N <= params.S) {
+                cerr << "Warning: small dataset, shrinking S to " << (N-1) << "." << endl;
+                params.S = N - 1; 
+            }
 
             vector<Control> controls;
             if (verbosity > 0) cerr << "Generating control..." << endl;
