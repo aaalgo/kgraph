@@ -13,7 +13,7 @@ a user-provided function.
 
 For best generality, the C++ API should be used.  A python wrapper
 is provided under the module name pykgraph, which supports Euclidean
-and Angular distances on top of NumPy matrices.
+and Angular distances on rows of NumPy matrices.
 
 # Building and Installation
 
@@ -30,21 +30,32 @@ python setup.py install
 # Python Quick Start
 
 ```python
->>> from numpy import random
->>> import pykgraph
->>> dataset = random.rand(1000000, 16)
->>> query = random.rand(1000, 16)
->>> index = pykgraph.KGraph(dataset, 'euclidean')
->>> index.build()
->>> index.save("index_file");
->>> # load with index.load("index_file");
-......
->>> result = index.search(query, K=10)                        # this uses all CPU threads, set prune=1 to make index smaller (no accuracy loss)
->>> result = index.search(query, K=10, threads=1)             # one thread, slower
->>> result.shape             # the k-nn IDs.
->>> result = index.search(query, K=1000, P=100)                # search for 1000-nn, no need to recompute index.
-(1000, 10) 
+from numpy import random
+import pykgraph
+
+dataset = random.rand(1000000, 16)
+query = random.rand(1000, 16)
+
+index = pykgraph.KGraph(dataset, 'euclidean')
+index.build(reverse=-1)                        #
+index.save("index_file");
+# load with index.load("index_file");
+
+knn = index.search(query, K=10)                       # this uses all CPU threads
+knn = index.search(query, K=10, threads=1)            # one thread, slower
+knn = index.search(query, K=1000, P=100)              # search for 1000-nn, no need to recompute index.
 ```
+
+Both index.build and index.search supports a number of optional keywords arguments to fine tune the performance.
+The default values should work reasonably well for many datasets.  One exception is that reverse=-1 should be added if
+the purpose of building index is to speedup search, which is the typical case, rather than to obtain the
+k-NN graph itself).
+
+Two precautions should be taken:
+* Although matrices of both float32 and float64 are supported, the latter is not optimized.  It is recommened that
+matrices be converted to float32 before being passed into kgraph.
+* The dimension (columns of matrices) should be a multiple of 4.  If not, zeros must be padded.
+
 # C++ Quick Start
 
 
