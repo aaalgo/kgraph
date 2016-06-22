@@ -121,7 +121,7 @@ index->search(oracle, params, &knn[0]);
 
 delete index;
 ```
-# Oracle Implementations for Common Tasks
+# Oracles for Common Tasks
 KGraph provides the following efficient oracle implementation for
 common tasks.  The user is encouraged to use the provided oracles
 when they meet the demand.
@@ -134,7 +134,7 @@ such a dataset, and the MatrixProxy class for user to directly use
 data managed by a OpenCV, Numpy or a FLANN matrix.
 
 
-### Using KGraph Native Matrix
+### Using KGraph's Native Matrix
 ```cpp
 #include <kgraph.h>
 #include <kgraph-data.h>
@@ -143,15 +143,14 @@ kgraph::Matrix<float> data(rows, cols);	// kgraph native matrix
 
 data.size();   // returns # rows
 data.dim();    // returns # cols
-data[i];       // pointer to i-th row
+float *row = data[i];       // pointer to i-th row
 
 // save and load matrix in LSHKIT format.
 data.save_lshkit("path");
 data.load_lshkit("path");
 
-typedef kgraph::MatrixOracle<kgraph::Matrix<float>,
-		kgraph::metric::l2sqr
-	> MyOracle;
+typedef kgraph::MatrixOracle<float, kgraph::metric::l2sqr
+        > MyOracle;
 
 MyOracle oracle(data);
 
@@ -171,7 +170,55 @@ index->search(oracle.query(query_vec), ...)
 // must follow opencv or numpy so
 #include <kgraph-data.h>
 
+cv::Mat data(rows, cols, CV_32FC1);
+
+typedef kgraph::MatrixOracle<float, kgraph::metric::l2sqr
+        > MyOracle;
+
+MatrixProxy<float> proxy(data);
+
+MyOracle oracle(proxy);	// defined as above
+
+index->build(oracle, params);
+```
+
+### NumPy Matrix
+```cpp
+#include <Python.h>
+#include <numpy/ndarrayobject.h>
+#include <kgraph.h>
+#include <kgraph-data.h>
+
+npy_intp dims[] = {rows, cols};
+PyArrayObject *data = PyArray_SimpleNew(2, dims, NPY_FLOAT);
+MatrixProxy<float> proxy(data);
+
+MyOracle oracle(proxy);	// defined as above
+
+index->build(oracle, params);
+```
+
 ## Entries of Vectors
+
+If data objects are stored in std::vector, then VectorOracle can come in handy.
+```cpp
+#include <kgraph.h>
+
+vector<MyType> data;
+
+typedef kgraph::VectorOracle<vector<MyType>, MyType> MyOracle;
+MyOracle oracle(data, [](MyType const &a, MyType const &b) {
+           compute and return similarity between a and b;
+        });
+
+index->build(oracle, ...);
+
+MyType query;
+
+index->search(oracle.query(query), ...);
+
+```
+
 
 [Doxygen documentation](http://aaalgo.github.io/kgraph/doc/html/annotated.html)
 
