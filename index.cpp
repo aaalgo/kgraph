@@ -118,7 +118,7 @@ int main (int argc, char *argv[]) {
     Matrix<value_type> data;
     if (synthetic) {
         if (!std::is_floating_point<value_type>::value) {
-            throw runtime_error("synthetic data not implemented for non-floating-point values.");
+            throw std::runtime_error("synthetic data not implemented for non-floating-point values.");
         }
         data.resize(synthetic, D);
         cerr << "Generating synthetic data..." << endl;
@@ -137,7 +137,7 @@ int main (int argc, char *argv[]) {
     }
     if (noise != 0) {
         if (!std::is_floating_point<value_type>::value) {
-            throw runtime_error("noise injection not implemented for non-floating-point value.");
+            throw std::runtime_error("noise injection not implemented for non-floating-point value.");
         }
         tr1::ranlux64_base_01 rng;
         double sum = 0, sum2 = 0;

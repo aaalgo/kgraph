@@ -8,6 +8,8 @@
 #ifndef WDONG_KGRAPH
 #define WDONG_KGRAPH
 
+#include <stdexcept>
+
 namespace kgraph {
     static unsigned const default_iterations =  30;
     static unsigned const default_L = 100;
@@ -280,6 +282,22 @@ namespace kgraph {
             return VectorSearchOracle(data, q, dist);
         }
     };
+
+    class invalid_argument: public std::invalid_argument {
+    public:
+        using std::invalid_argument::invalid_argument;
+    };
+
+    class runtime_error: public std::runtime_error {
+    public:
+        using std::runtime_error::runtime_error;
+    };
+
+    class io_error: public runtime_error {
+    public:
+        using runtime_error::runtime_error;
+    };
+
 }
 #endif
 

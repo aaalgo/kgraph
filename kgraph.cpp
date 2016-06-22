@@ -284,7 +284,7 @@ namespace kgraph {
         virtual ~KGraphImpl () {
         }
         virtual void load (char const *path) {
-            BOOST_VERIFY(sizeof(unsigned) == sizeof(uint32_t));
+            static_assert(sizeof(unsigned) == sizeof(uint32_t), "unsigned must be 32-bit");
             ifstream is(path, ios::binary);
             char magic[KGRAPH_MAGIC_SIZE];
             uint32_t sig_version;
@@ -439,8 +439,8 @@ namespace kgraph {
                     }
                 }
                 else {          // user-provided starting points.
-                    BOOST_VERIFY(ids);
-                    BOOST_VERIFY(L < params.K);
+                    if (!ids) throw invalid_argument("no initial data provided via ids");
+                    if (!(L < params.K)) throw invalid_argument("L < params.K");
                     for (unsigned l = 0; l < L; ++l) {
                         knn[l].id = ids[l];
                     }
@@ -519,10 +519,12 @@ namespace kgraph {
                 }
             }
             unsigned L = results.size();
+            /*
             if (!(L <= params.K)) {
                 cerr << L << ' ' << params.K << endl;
             }
-            BOOST_VERIFY(L <= params.K);
+            */
+            if (!(L <= params.K)) throw runtime_error("L <= params.K");
             // check epsilon
             if (ids) {
                 for (unsigned k = 0; k < L; ++k) {
@@ -542,7 +544,7 @@ namespace kgraph {
         }
 
         virtual void get_nn (unsigned id, unsigned *nns, float *dist, unsigned *pM, unsigned *pL) const {
-            BOOST_VERIFY(id < graph.size());
+            if (!(id < graph.size())) throw invalid_argument("id too big");
             auto const &v = graph[id];
             *pM = M[id];
             *pL = v.size();

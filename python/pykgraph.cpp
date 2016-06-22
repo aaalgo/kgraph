@@ -55,19 +55,18 @@ namespace {
         std::ifstream is(path.c_str(), std::ios::binary);
         unsigned header[LSHKIT_HEADER]; /* entry size, row, col */
         is.read((char *)header, sizeof header);
-        BOOST_VERIFY(is);
+        if (!is) throw kgraph::io_error(path);
         unsigned elsize = header[0];
         unsigned N = header[1];
         unsigned D = header[2];
         npy_intp dims[2] = {N, D};
         PyArray_Descr *descr = PyArray_DescrFromTypeObject(type);
-        BOOST_VERIFY(descr->elsize == elsize);
+        if (!(descr->elsize == elsize)) throw kgraph::io_error(path);
         PyObject *nd = PyArray_SimpleNewFromDescr(2, &dims[0], descr);
-        BOOST_VERIFY(nd);
-        BOOST_VERIFY(PyArray_ITEMSIZE(nd) == elsize);
+        if ((!nd) || (PyArray_ITEMSIZE(nd) != elsize)) throw kgraph::runtime_error("error creating numpy matrix");
         float *buf = reinterpret_cast<float*>(PyArray_DATA(nd));
         is.read((char *)&buf[0], 1LL * N * D * elsize);
-        BOOST_VERIFY(is);
+        if (!is) throw kgraph::io_error(path);
         return nd;
     }
 
@@ -228,15 +227,23 @@ namespace {
     };
 
     void check_array (PyArrayObject *array, float) {
-        BOOST_VERIFY(array->nd == 2);
-        BOOST_VERIFY(array->dimensions[1] % 4 == 0);
-        BOOST_VERIFY(array->descr->type_num == NPY_FLOAT);
+        do {
+            if (array->nd != 2) break;
+            if (array->dimensions[1] % 4) break;
+            if (array->descr->type_num != NPY_FLOAT) break;
+            return;
+        } while (false);
+        throw kgraph::invalid_argument("bad array type");
     }
 
     void check_array (PyArrayObject *array, double) {
-        BOOST_VERIFY(array->nd == 2);
-        BOOST_VERIFY(array->dimensions[1] % 4 == 0);
-        BOOST_VERIFY(array->descr->type_num == NPY_DOUBLE);
+        do {
+            if (array->nd != 2) break;
+            if (array->dimensions[1] % 4) break;
+            if (array->descr->type_num != NPY_DOUBLE) break;
+            return;
+        } while (false);
+        throw kgraph::invalid_argument("bad array type");
     }
 
     class ImplBase {
@@ -357,12 +364,12 @@ public:
         cerr << "   index.build(...)" << endl;
         cerr << "   index.search(query, ...)" << endl;
         cerr << "!!!!!!!!!!" << endl;
-        BOOST_VERIFY(0);
+        throw kgraph::invalid_argument("obsolete constructor");
     }
 
     KGraph (PyObject *data, string const &metric): impl(nullptr) {
         PyArrayObject *pd = reinterpret_cast<PyArrayObject *>(data);
-        BOOST_VERIFY(pd);
+        if (!pd) throw kgraph::invalid_argument("bad array");
         if (metric == "euclidean") {
             switch (pd->descr->type_num) {
                 case NPY_FLOAT: impl = new Impl<float, EuclideanLike>(pd); break;

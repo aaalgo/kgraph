@@ -40,7 +40,6 @@ namespace kgraph {
 
 
     using std::vector;
-    using std::runtime_error;
 
     /// namespace for various distance metrics.
     namespace metric {
@@ -149,7 +148,7 @@ namespace kgraph {
         
         void load (const std::string &path, unsigned dim, unsigned skip = 0, unsigned gap = 0) {
             std::ifstream is(path.c_str(), std::ios::binary);
-            BOOST_VERIFY(is);
+            if (!is) throw io_error(path);
             is.seekg(0, std::ios::end);
             size_t size = is.tellg();
             size -= skip;
@@ -162,7 +161,7 @@ namespace kgraph {
                 is.read(&data[stride * i], sizeof(T) * dim);
                 is.seekg(gap, std::ios::cur);
             }
-            BOOST_VERIFY(is);
+            if (!is) throw io_error(path);
         }
 
         void load_lshkit (std::string const &path) {
@@ -170,8 +169,8 @@ namespace kgraph {
             std::ifstream is(path.c_str(), std::ios::binary);
             unsigned header[LSHKIT_HEADER]; /* entry size, row, col */
             is.read((char *)header, sizeof header);
-            BOOST_VERIFY(is);
-            BOOST_VERIFY(header[0] == sizeof(T));
+            if (!is) throw io_error(path);
+            if (header[0] != sizeof(T)) throw io_error(path);
             is.close();
             unsigned D = header[2];
             unsigned skip = LSHKIT_HEADER * sizeof(unsigned);
@@ -210,27 +209,27 @@ namespace kgraph {
         /// Construct from FLANN matrix.
         MatrixProxy (flann::Matrix<DATA_TYPE> const &m)
             : rows(m.rows), cols(m.cols), stride(m.stride), data(m.data) {
-            BOOST_VERIFY(stride % A == 0);
+            if (stride % A) throw invalid_argument("bad alignment");
         }
 #endif
 #ifdef __OPENCV_CORE_HPP__
         /// Construct from OpenCV matrix.
         MatrixProxy (cv::Mat const &m)
             : rows(m.rows), cols(m.cols), stride(m.step), data(m.data) {
-            BOOST_VERIFY(stride % A == 0);
+            if (stride % A) throw invalid_argument("bad alignment");
         }
 #endif
 #ifdef NPY_NDARRAYOBJECT_H
         /// Construct from NumPy matrix.
         MatrixProxy (PyArrayObject *obj) {
-            BOOST_VERIFY(obj->nd == 2);
+            if (!obj || (obj->nd != 2)) throw invalid_argument("bad array shape");
             rows = obj->dimensions[0];
             cols = obj->dimensions[1];
             stride = obj->strides[0];
             data = reinterpret_cast<uint8_t const *>(obj->data);
-            BOOST_VERIFY(obj->descr->elsize == sizeof(DATA_TYPE));
-            BOOST_VERIFY(stride % A == 0);
-            BOOST_VERIFY(stride >= cols * sizeof(DATA_TYPE));
+            if (obj->descr->elsize != sizeof(DATA_TYPE)) throw invalid_argument("bad data type size");
+            if (stride % A) throw invalid_argument("bad alignment");
+            if (!(stride >= cols * sizeof(DATA_TYPE))) throw invalid_argument("bad stride");
         }
 #endif
 #endif
@@ -287,9 +286,9 @@ namespace kgraph {
         if (K == 0) {
             K = result.dim();
         }
-        BOOST_VERIFY(gs.dim() >= K);
-        BOOST_VERIFY(result.dim() >= K);
-        BOOST_VERIFY(gs.size() >= result.size());
+        if (!(gs.dim() >= K)) throw invalid_argument("gs.dim() >= K");
+        if (!(result.dim() >= K)) throw invalid_argument("result.dim() >= K");
+        if (!(gs.size() >= result.size())) throw invalid_argument("gs.size() > result.size()");
         float sum = 0;
         for (unsigned i = 0; i < result.size(); ++i) {
             float const *gs_row = gs[i];
