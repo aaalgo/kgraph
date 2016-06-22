@@ -126,6 +126,7 @@ KGraph::SearchParams params;
 params.K = K;
 vector<unsigned> knn(K);    	// to save K-NN ids.
 index->search(oracle, params, &knn[0]);
+// knn now contains the IDs of k-NNs, highest similarity in the front
 
 delete index;
 ```
