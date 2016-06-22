@@ -43,7 +43,7 @@ import pykgraph
 dataset = random.rand(1000000, 16)
 query = random.rand(1000, 16)
 
-index = pykgraph.KGraph(dataset, 'euclidean')
+index = pykgraph.KGraph(dataset, 'euclidean')  # another option is 'angular'
 index.build(reverse=-1)                        #
 index.save("index_file");
 # load with index.load("index_file");
@@ -133,8 +133,49 @@ function.  KGraph provides the class Matrix for user to create
 such a dataset, and the MatrixProxy class for user to directly use
 data managed by a OpenCV, Numpy or a FLANN matrix.
 
+Note that the matrix proxy does not copy memory, so the original
+OpenCV or NumPy matrix must live throughput the life time of
+the matrix proxy.
 
-### Using KGraph's Native Matrix
+### OpenCV Matrix
+```cpp
+#include <kgraph.h>
+#include <opencv2/opencv.hpp>
+#include <kgraph-data.h> // must follow opencv
+
+cv::Mat data(rows, cols, CV_32FC1);
+
+typedef kgraph::MatrixOracle<float, kgraph::metric::l2sqr
+        > MyOracle;
+
+kgraph::MatrixProxy<float> proxy(data);
+
+MyOracle oracle(proxy);	// defined as above
+index->build(oracle, ...);
+
+// MyOracle::query(float const *) returns a search oracle
+index->search(oracle.query(data.ptr<float const>(i)), ...);
+```
+
+### NumPy Matrix
+```cpp
+#include <Python.h>
+#include <numpy/ndarrayobject.h>
+#include <kgraph.h>
+#include <kgraph-data.h>
+
+npy_intp dims[] = {rows, cols};
+PyArrayObject *data = PyArray_SimpleNew(2, dims, NPY_FLOAT);
+kgraph::MatrixProxy<float> proxy(data);
+
+MyOracle oracle(proxy);	// defined as above 
+
+index->build(oracle, ...);
+float const *query;
+index->search(oracle.query(query), ...);
+```
+
+### KGraph's Native Matrix
 ```cpp
 #include <kgraph.h>
 #include <kgraph-data.h>
@@ -149,54 +190,16 @@ float *row = data[i];       // pointer to i-th row
 data.save_lshkit("path");
 data.load_lshkit("path");
 
-typedef kgraph::MatrixOracle<float, kgraph::metric::l2sqr
-        > MyOracle;
+MyOracle oracle(data);	    // MyOracle defined as above
 
-MyOracle oracle(data);
+index->build(oracle, ...);
 
-index->build(oracle, params);
-...
+float const *query;	// pointer to query vector
 
-float const *query_vec;	// pointer to query vector
-
-// oracle.query(query_vec) returns a search oracle.
-index->search(oracle.query(query_vec), ...)
+// oracle.query(query) returns a search oracle.
+index->search(oracle.query(query), ...)
 ```
 
-### OpenCV Matrix
-```cpp
-#include <kgraph.h>
-#include <opencv2/opencv.hpp>
-// must follow opencv or numpy so
-#include <kgraph-data.h>
-
-cv::Mat data(rows, cols, CV_32FC1);
-
-typedef kgraph::MatrixOracle<float, kgraph::metric::l2sqr
-        > MyOracle;
-
-MatrixProxy<float> proxy(data);
-
-MyOracle oracle(proxy);	// defined as above
-
-index->build(oracle, params);
-```
-
-### NumPy Matrix
-```cpp
-#include <Python.h>
-#include <numpy/ndarrayobject.h>
-#include <kgraph.h>
-#include <kgraph-data.h>
-
-npy_intp dims[] = {rows, cols};
-PyArrayObject *data = PyArray_SimpleNew(2, dims, NPY_FLOAT);
-MatrixProxy<float> proxy(data);
-
-MyOracle oracle(proxy);	// defined as above
-
-index->build(oracle, params);
-```
 
 ## Entries of Vectors
 
@@ -205,11 +208,12 @@ If data objects are stored in std::vector, then VectorOracle can come in handy.
 #include <kgraph.h>
 
 vector<MyType> data;
+auto fn = [](MyType const &a, MyType const &b) {
+           compute and return similarity between a and b;
+          };
 
 typedef kgraph::VectorOracle<vector<MyType>, MyType> MyOracle;
-MyOracle oracle(data, [](MyType const &a, MyType const &b) {
-           compute and return similarity between a and b;
-        });
+MyOracle oracle(data, fn);
 
 index->build(oracle, ...);
 
