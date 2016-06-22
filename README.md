@@ -89,6 +89,31 @@ two abstract classes
     };
 ```
 
+With the oracle classes defined, index construction and online search become straightfoward:
+
+```
+MyIndexOracle ioracle(...);	// subclass of kgraph::IndexOracle
+KGraph::IndexParams params;  
+params.reverse = -1;
+
+KGraph *index = KGraph::create();
+
+index->build(ioracle, params);
+
+index->save("some_path");	// optionally save for later
+				// load with index->load()
+
+MySearchOracle soracle(...);	// subclass of kgraph::SearchOracle
+
+KGraph::SearchParams params;
+params.K = K;
+vector<unsigned> knn(K);    	// to save K-NN ids.
+
+index->search(soracle, params, &knn[0], NULL);
+
+delete index;
+```
+
 
 
 http://www.kgraph.org/
