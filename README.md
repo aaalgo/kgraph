@@ -121,15 +121,14 @@ index->search(oracle, params, &knn[0]);
 
 delete index;
 ```
-# Oracles for Common Tasks
 
+# More Documentation
+### Oracles for Common Tasks
 KGraph provides a number of [efficient oracle implementation](doc/oracle.md) for
 common tasks. 
-
-# Useful Links
-## [Parameter Tuning](doc/params.md)
-## [Old API Documentation](http://www.kgraph.org/index.php?n=Main.API)
-## [Doxygen Documentation](http://aaalgo.github.io/kgraph/doc/html/annotated.html)
+### [Parameter Tuning](doc/params.md)
+### [Old API Documentation](http://www.kgraph.org/index.php?n=Main.API)
+### [Doxygen Documentation](http://aaalgo.github.io/kgraph/doc/html/annotated.html)
 
 http://www.kgraph.org/
 
