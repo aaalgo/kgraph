@@ -126,8 +126,10 @@ delete index;
 KGraph provides a number of [efficient oracle implementation](doc/oracle.md) for
 common tasks. 
 
-# [Parameter Tuning](doc/params.md)
-# [Doxygen documentation](http://aaalgo.github.io/kgraph/doc/html/annotated.html)
+# Useful Links
+## [Parameter Tuning](doc/params.md)
+## [Old API Documentation](http://www.kgraph.org/index.php?n=Main.API)
+## [Doxygen Documentation](http://aaalgo.github.io/kgraph/doc/html/annotated.html)
 
 http://www.kgraph.org/
 
