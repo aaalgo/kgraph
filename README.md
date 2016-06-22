@@ -123,12 +123,11 @@ delete index;
 ```
 # Oracles for Common Tasks
 
-KGraph provides a number of [efficient oracle implementation](docs/oracle.md) for
+KGraph provides a number of [efficient oracle implementation](doc/oracle.md) for
 common tasks. 
 
-# [Parameter Tuning](docs/params.md)
-
-[Doxygen documentation](http://aaalgo.github.io/kgraph/doc/html/annotated.html)
+# [Parameter Tuning](doc/params.md)
+# [Doxygen documentation](http://aaalgo.github.io/kgraph/doc/html/annotated.html)
 
 http://www.kgraph.org/
 
