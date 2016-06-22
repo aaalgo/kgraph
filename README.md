@@ -92,24 +92,26 @@ two abstract classes
 With the oracle classes defined, index construction and online search become straightfoward:
 
 ```cpp
-MyIndexOracle ioracle(...);	// subclass of kgraph::IndexOracle
-KGraph::IndexParams params;  
-params.reverse = -1;
 
 KGraph *index = KGraph::create();
 
-index->build(ioracle, params);
+if (need_to_create_new_index) {
+    MyIndexOracle oracle(...);	// subclass of kgraph::IndexOracle
+    KGraph::IndexParams params;  
+    params.reverse = -1;
+    index->build(oracle, params);
+    index->save("some_path");
+}
+else {
+    index->load("some_path");
+}
 
-index->save("some_path");	// optionally save for later
-				// load with index->load()
-
-MySearchOracle soracle(...);	// subclass of kgraph::SearchOracle
+MySearchOracle oracle(...);	// subclass of kgraph::SearchOracle
 
 KGraph::SearchParams params;
 params.K = K;
 vector<unsigned> knn(K);    	// to save K-NN ids.
-
-index->search(soracle, params, &knn[0], NULL);
+index->search(oracle, params, &knn[0]);
 
 delete index;
 ```
