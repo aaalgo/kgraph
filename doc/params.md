@@ -12,7 +12,7 @@ In the Python API, these parameters are passed in as optional
 keyword arguments to the build and search methods.  When not set,
 the same default values are assumed.
 
-# General Guideline for Parameter Tuning
+# General Guidelines for Parameter Tuning
 
 ## Online k-NN Search
 
@@ -55,10 +55,6 @@ Typical settings are (K = 25, L = 100), (K=50~100, L=150), (K=200, L=300), etc.
 Enlarging `S` slightly increases accuracy, but slows down computation significantly,
 and is typically set below 30.
 `R` typically does not have to be changed.
-
-
-
-## k-NN Graph Construction
 
 
 # Index Parameters
