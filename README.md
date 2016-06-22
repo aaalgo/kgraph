@@ -97,6 +97,7 @@ two abstract classes
 With the oracle classes defined, index construction and online search become straightfoward:
 
 ```cpp
+#include <kgraph.h>
 
 KGraph *index = KGraph::create();
 
@@ -120,6 +121,58 @@ index->search(oracle, params, &knn[0]);
 
 delete index;
 ```
+# Oracle Implementations for Common Tasks
+KGraph provides the following efficient oracle implementation for
+common tasks.  The user is encouraged to use the provided oracles
+when they meet the demand.
+
+## Rows of Matrices
+In a very common scenario, objects are stored as rows of a matrix
+in the row-major order, and L2 distance is used as the similarity
+function.  KGraph provides the class Matrix for user to create
+such a dataset, and the MatrixProxy class for user to directly use
+data managed by a OpenCV, Numpy or a FLANN matrix.
+
+
+### Using KGraph Native Matrix
+```cpp
+#include <kgraph.h>
+#include <kgraph-data.h>
+
+kgraph::Matrix<float> data(rows, cols);	// kgraph native matrix
+
+data.size();   // returns # rows
+data.dim();    // returns # cols
+data[i];       // pointer to i-th row
+
+// save and load matrix in LSHKIT format.
+data.save_lshkit("path");
+data.load_lshkit("path");
+
+typedef kgraph::MatrixOracle<kgraph::Matrix<float>,
+		kgraph::metric::l2sqr
+	> MyOracle;
+
+MyOracle oracle(data);
+
+index->build(oracle, params);
+...
+
+float const *query_vec;	// pointer to query vector
+
+// oracle.query(query_vec) returns a search oracle.
+index->search(oracle.query(query_vec), ...)
+```
+
+### OpenCV Matrix
+```cpp
+#include <kgraph.h>
+#include <opencv2/opencv.hpp>
+// must follow opencv or numpy so
+#include <kgraph-data.h>
+
+## Entries of Vectors
+
 [Doxygen documentation](http://aaalgo.github.io/kgraph/doc/html/annotated.html)
 
 http://www.kgraph.org/
