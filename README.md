@@ -91,7 +91,7 @@ two abstract classes
 
 With the oracle classes defined, index construction and online search become straightfoward:
 
-```
+```cpp
 MyIndexOracle ioracle(...);	// subclass of kgraph::IndexOracle
 KGraph::IndexParams params;  
 params.reverse = -1;
@@ -113,7 +113,6 @@ index->search(soracle, params, &knn[0], NULL);
 
 delete index;
 ```
-
 
 
 http://www.kgraph.org/
