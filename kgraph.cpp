@@ -982,6 +982,7 @@ public:
                     knn[k].dist = pool[k].dist;
                 }
             }
+            nhoods.clear();
             if (params.reverse) {
                 reverse(params.reverse);
             }
