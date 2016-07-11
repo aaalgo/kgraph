@@ -290,6 +290,7 @@ namespace {
             npy_intp dims[] = {qmatrix.size(), params.K};
             PyObject *result =  PyArray_SimpleNew(2, dims, NPY_UINT32);
             PyObject *distance =  PyArray_SimpleNew(2, dims, NPY_FLOAT);
+            Py_BEGIN_ALLOW_THREADS
             kgraph::MatrixProxy<unsigned, 1> rmatrix(reinterpret_cast<PyArrayObject *>(result));
             kgraph::MatrixProxy<float, 1> distmatrix(reinterpret_cast<PyArrayObject *>(distance));
 #ifdef _OPENMP
@@ -328,6 +329,7 @@ namespace {
                     }
                 }
             }
+            Py_END_ALLOW_THREADS
 
             if (params.withDistance) {
                 PyObject* tup = PyTuple_New(2);
