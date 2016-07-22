@@ -9,7 +9,7 @@ heuristic algorithms that are extremely generic and fast:
 * KGraph works on abstract objects.  The only assumption it makes is
 that a similarity score can be computed on any pair of objects, with
 a user-provided function.
-* KGraph is among the fastest of libraries for k-NN search.
+* KGraph is among the fastest of libraries for k-NN search according to [recent benchmark](https://github.com/erikbern/ann-benchmarks).
 
 For best generality, the C++ API should be used.  A python wrapper
 is provided under the module name pykgraph, which supports Euclidean
