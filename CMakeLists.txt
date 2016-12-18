@@ -21,7 +21,7 @@ add_executable(index index.cpp)
 add_executable(search search.cpp)
 set(TOOLS index search)
 foreach(TOOL ${TOOLS})
-	target_link_libraries(${TOOL} kgrapha ${Boost_LIBRARIES})
+	target_link_libraries(${TOOL} kgrapha ${Boost_LIBRARIES} rt)
 endforeach(TOOL)
 install (FILES kgraph.h kgraph-data.h DESTINATION include) 
 install (TARGETS kgraph kgrapha
