@@ -1,0 +1,41 @@
+CC=emcc
+CXX=em++
+OPT=-O3
+VERSION=$(shell git describe --always)
+BUILD_INFO=-DKGRAPH_VERSION=$(VERSION) -DKGRAPH_BUILD_ID=$(BUILD_ID) -DKGRAPH_BUILD_NUMBER=$(BUILD_NUMBER)
+CXXFLAGS+=$(BUILD_INFO) -Wall -g -g4 -std=c++11 -I. $(OPENMP) $(OPT) $(ARCH) 
+LDFLAGS+=$(OPENMP) -static
+LDLIBS+=-lboost_timer -lboost_chrono -lboost_system -lboost_program_options -lm
+
+.SUFFIXES:	.bc .js .html
+.PHONY:	all python clean release deps-ubuntu flann
+
+COMMON=kgraph.o metric.o
+HEADERS=kgraph.h kgraph-data.h 
+PROGS=resave.js index.js search.js test.js
+PRELOAD=sift.data
+
+EM_OPT=-s PRECISE_F32=1 -s ALLOW_MEMORY_GROWTH=1 -s DEMANGLE_SUPPORT=1
+
+all:	libkgraph.a $(PROGS) python $(EXTRA_PROGS)
+	echo $(BUILD_INFO)
+
+%.js:	%.bc 
+	$(CXX) -O2 -o $@ $^ $(EM_OPT) #-s ALLOW_MEMORY_GROWTH=1 
+
+%.html:	%.bc 
+	$(CXX) -O2 -o $@ $^ $(EM_OPT) # --preload-file $(PRELOAD) 
+
+
+%.bc:	%.cpp $(HEADERS) $(COMMON)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $*.cpp $(COMMON) $(LDLIBS)
+
+libkgraph.a:	$(COMMON)
+	emar rvs $@ $^
+
+%.o:	%.cpp $(HEADERS)
+	$(CXX) $(CXXFLAGS) -c $*.cpp 
+
+clean:
+	rm -f $(PROGS) *.o
+

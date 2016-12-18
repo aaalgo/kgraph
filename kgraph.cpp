@@ -11,7 +11,9 @@
 #define STRINGIFY_HELPER(x) #x
 static char const *kgraph_version = STRINGIFY(KGRAPH_VERSION) "-" STRINGIFY(KGRAPH_BUILD_NUMBER) "," STRINGIFY(KGRAPH_BUILD_ID);
 
+#ifdef _OPENMP
 #include <omp.h>
+#endif
 #include <unordered_set>
 #include <mutex>
 #include <iostream>
