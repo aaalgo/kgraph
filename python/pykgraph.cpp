@@ -461,7 +461,7 @@ init() { import_array(); }
 BOOST_PYTHON_MODULE(pykgraph)
 {
     init();
-    python::numeric::array::set_module_and_type("numpy", "ndarray");
+    //python::numeric::array::set_module_and_type("numpy", "ndarray");
     python::class_<KGraph>("KGraph", python::init<PyObject *, string>())
         .def(python::init<>())
         //.def(python::init<PyObject *, string>())
