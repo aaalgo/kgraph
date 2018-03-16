@@ -1,3 +1,4 @@
+import sys
 import os
 import subprocess
 import numpy
@@ -8,12 +9,18 @@ GIT_VERSION = subprocess.check_output("git describe --always", shell=True)
 
 numpy_root = os.path.join(os.path.abspath(os.path.dirname(numpy.__file__)), 'core')
 
+if sys.version_info[0] < 3:
+    boost_python = 'boost_python'
+else:
+    boost_python = 'boost_python3'
+    pass
+
 pykgraph = Extension('pykgraph',
         language = 'c++',
         extra_compile_args = ['-O3', '-std=c++11', '-msse2', '-fopenmp', '-DKGRAPH_VERSION=%s' % GIT_VERSION],
         extra_link_args = ['-fopenmp'],
         include_dirs = ['.', os.path.join(numpy_root, 'include')],
-        libraries = ['boost_python', 'boost_timer'],
+        libraries = [boost_python, 'boost_timer'],
         sources = ['kgraph.cpp', 'metric.cpp', 'python/pykgraph.cpp'],
         depends = ['kgraph.h', 'kgraph-data.h'])
 
