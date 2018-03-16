@@ -334,6 +334,21 @@ namespace kgraph {
         }
 
         virtual void save (char const *path, int format) const {
+            if (format == FORMAT_TEXT) {
+                std::cerr << "Saving to text file; you won't be able to load text file." << std::endl;
+                ofstream os(path);
+                os << graph.size() << endl;
+                for (unsigned i = 0; i < graph.size(); ++i) {
+                    auto const &knn = graph[i];
+                    uint32_t K = knn.size();
+                    os << K;
+                    for (unsigned k = 0; k < K; ++k) {
+                        os << ' ' << knn[k].id << ' ' << knn[k].dist;
+                    }
+                    os << endl;
+                }
+                return;
+            }
             ofstream os(path, ios::binary);
             uint32_t N = graph.size();
             os.write(KGRAPH_MAGIC, KGRAPH_MAGIC_SIZE);

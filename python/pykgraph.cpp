@@ -269,6 +269,9 @@ namespace {
         void save (char const *path) const {
             index->save(path);
         }
+        void save_text (char const *path) const {
+            index->save(path, kgraph::KGraph::FORMAT_TEXT);
+        }
     };
 
     template <typename DATA_TYPE, typename METRIC_TYPE>
@@ -400,6 +403,10 @@ public:
         impl->save(path);
     }
 
+    void save_text (char const *path) const {
+        impl->save_text(path);
+    }
+
     void build (unsigned iterations,
                unsigned L,
                unsigned K,
@@ -468,6 +475,7 @@ BOOST_PYTHON_MODULE(pykgraph)
             //  (python::arg("data"), python::arg("metric") = "euclidean")))
         .def("load", &KGraph::load)
         .def("save", &KGraph::save)
+        .def("save_text", &KGraph::save_text)
         .def("build", &KGraph::build,
              (python::arg("data"),
               python::arg("iterations") = kgraph::default_iterations,

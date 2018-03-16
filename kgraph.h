@@ -127,7 +127,8 @@ namespace kgraph {
 
         enum {
             FORMAT_DEFAULT = 0,
-            FORMAT_NO_DIST = 1
+            FORMAT_NO_DIST = 1,
+            FORMAT_TEXT = 128
         };
 
         /// Information and statistics of the indexing algorithm.
