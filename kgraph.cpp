@@ -1017,6 +1017,7 @@ public:
         KGraphConstructor con(oracle, param, info);
         M.swap(con.M);
         graph.swap(con.graph);
+        std::swap(no_dist, con.no_dist);
     }
 
     KGraph *KGraph::create () {
