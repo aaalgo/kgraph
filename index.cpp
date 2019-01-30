@@ -11,8 +11,8 @@
 #include <random>
 #include <iomanip>
 #include <type_traits>
+#include <iostream>
 #include <boost/timer/timer.hpp>
-#include <boost/tr1/random.hpp>
 #include <boost/format.hpp>
 #include <boost/program_options.hpp>
 #include "kgraph.h"
@@ -139,7 +139,8 @@ int main (int argc, char *argv[]) {
         if (!std::is_floating_point<value_type>::value) {
             throw std::runtime_error("noise injection not implemented for non-floating-point value.");
         }
-        tr1::ranlux64_base_01 rng;
+        //tr1::ranlux64_base_01 rng;
+        std::default_random_engine rng;
         double sum = 0, sum2 = 0;
         for (unsigned i = 0; i < data.size(); ++i) {
             for (unsigned j = 0; j < data.dim(); ++j) {
@@ -152,7 +153,7 @@ int main (int argc, char *argv[]) {
         double avg2 = sum2 / total, avg = sum / total;
         double dev = sqrt(avg2 - avg * avg);
         cerr << "Adding Gaussian noise w/ " << noise << "x sigma(" << dev << ")..." << endl;
-        boost::normal_distribution<double> gaussian(0, noise * dev);
+        std::normal_distribution<double> gaussian(0, noise * dev);
         for (unsigned i = 0; i < data.size(); ++i) {
             for (unsigned j = 0; j < data.dim(); ++j) {
                 data[i][j] += gaussian(rng);
