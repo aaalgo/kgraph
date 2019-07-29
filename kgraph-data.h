@@ -215,7 +215,7 @@ namespace kgraph {
             if (stride % A) throw invalid_argument("bad alignment");
         }
 #endif
-#ifdef __OPENCV_CORE_HPP__
+#ifdef CV_MAJOR_VERSION
         /// Construct from OpenCV matrix.
         MatrixProxy (cv::Mat const &m)
             : rows(m.rows), cols(m.cols), stride(m.step), data(m.data) {
