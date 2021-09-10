@@ -463,7 +463,10 @@ void *
 #else
 void
 #endif
-init() { import_array(); }
+init() {
+    import_array();
+    return NULL;
+}
 
 BOOST_PYTHON_MODULE(pykgraph)
 {
