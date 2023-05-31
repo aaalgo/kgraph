@@ -19,7 +19,7 @@ libraries = [
 
 ext = Extension('pykgraph',
         language = 'c++',
-        extra_compile_args = ['-std=c++17', '-O3', '-g', '-Wno-sign-compare', '-Wno-parentheses', '-DDEBUG', '-Wno-narrowing', '-Wno-attributes', '-Wno-unknown-pragmas'], 
+        extra_compile_args = ['-std=c++17', '-O3', '-g', '-Wno-sign-compare', '-Wno-parentheses', '-DDEBUG', '-Wno-narrowing', '-Wno-attributes', '-Wno-unknown-pragmas'],
         include_dirs = include_dirs,
         library_dirs = library_dirs,
         libraries = libraries,

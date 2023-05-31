@@ -16,6 +16,38 @@ using std::string;
 using std::vector;
 using std::runtime_error;
 
+#ifdef USE_BLAS
+extern "C" {
+    enum CBLAS_ORDER {CblasRowMajor=101, CblasColMajor=102};
+    enum CBLAS_TRANSPOSE {CblasNoTrans=111, CblasTrans=112, CblasConjTrans=113};
+    void cblas_sgemm(const enum CBLAS_ORDER Order, const enum CBLAS_TRANSPOSE TransA,
+                 const enum CBLAS_TRANSPOSE TransB, const int M, const int N,
+                 const int K, const float alpha, const float *A, 
+                 const int lda, const float *B, const int ldb,
+                 const float beta, float *C, const int ldc);
+    void cblas_dgemm(const enum CBLAS_ORDER Order, const enum CBLAS_TRANSPOSE TransA,
+                 const enum CBLAS_TRANSPOSE TransB, const int M, const int N,
+                 const int K, const double alpha, const double *A, 
+                 const int lda, const double *B, const int ldb,
+                 const double beta, double *C, const int ldc);
+}
+
+static void blas_prod (kgraph::MatrixProxy<float> const &p1, float const *p2, int n2, int l2, kgraph::Matrix<float> *r) {
+    r->zero();
+    cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasTrans, p1.size(), n2, p1.dim(),
+                1.0, p1[0], p1[1]-p1[0], p2, l2, 0, (*r)[0], (*r)[1]-(*r)[0]);
+}
+
+static void blas_prod (kgraph::MatrixProxy<double> const &p1, double const *p2, int n2, int l2, kgraph::Matrix<double> *r) {
+    r->zero();
+    cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasTrans, p1.size(), n2, p1.dim(),
+                1.0, p1[0], p1[1]-p1[0], p2, l2, 0, (*r)[0], (*r)[1]-(*r)[0]);
+}
+
+static unsigned constexpr MIN_BLAS_BATCH_SIZE = 16;
+#endif
+
+
 struct EuclideanLike {
     template <typename T>
     static float norm (T const *t1, unsigned dim) {
@@ -60,7 +92,6 @@ public:
     };
 
     NDArrayOracle (xt::xtensor<DATA_TYPE, 2> const &data): proxy(data), n2(proxy.size()) {
-        std::cout << "IMPL: " << proxy.size() << " x " << proxy.dim() << std::endl;
         for (unsigned i = 0; i < proxy.size(); ++i) {
             n2[i] = METRIC::norm(proxy[i], proxy.dim());
         }
@@ -117,7 +148,7 @@ public:
                 for (unsigned i = 0; i < q_proxy.size(); ++i) {
                     DATA_TYPE *row = dot[i];
                     DATA_TYPE qn2 = qn2s[i];
-                    vector<pair<DATA_TYPE, unsigned>> rank(end-begin);
+                    vector<std::pair<DATA_TYPE, unsigned>> rank(end-begin);
                     for (unsigned j = 0; j < rank.size(); ++j) {
                         rank[j] = std::make_pair(METRIC::dist(qn2,n2[j],row[j]), j);
                     }
@@ -223,9 +254,10 @@ public:
         xt::pytensor<float, 2> distance;
         distance.resize({size_t(qmatrix.size()), size_t(params.K)});
 
-        Py_BEGIN_ALLOW_THREADS
-        kgraph::MatrixProxy<unsigned, 1> rmatrix(result);
+        kgraph::MatrixProxy<uint32_t, 1> rmatrix(result);
         kgraph::MatrixProxy<float, 1> distmatrix(distance);
+
+        Py_BEGIN_ALLOW_THREADS
 #ifdef _OPENMP
         if (params.threads) {
             params.threads = ::omp_get_num_threads();

@@ -207,6 +207,9 @@ namespace kgraph {
             : rows(m.size()), cols(m.dim()), stride(m.step()), data(reinterpret_cast<uint8_t const *>(m[0])) {
         }
 
+        ~MatrixProxy () {
+        }
+
 #ifndef __AVX__
 #ifdef FLANN_DATASET_H_
         /// Construct from FLANN matrix.
@@ -240,8 +243,30 @@ namespace kgraph {
         MatrixProxy (xt::xtensor<DATA_TYPE, 2> const &obj) {
             rows = obj.shape(0);
             cols = obj.shape(1);
-            stride = reinterpret_cast<char const *>(&obj(1,0))
+            if (rows <= 1) {
+                stride = (cols * sizeof(DATA_TYPE) + A -1) / A * A;
+            }
+            else {
+                stride = reinterpret_cast<char const *>(&obj(1,0))
                    - reinterpret_cast<char const *>(&obj(0,0));
+                std::cerr << "STRIDE: " << stride << std::endl;
+            }
+            data = reinterpret_cast<uint8_t const *>(&obj(0,0));
+            if (stride % A) throw invalid_argument("bad alignment");
+            if (!(stride >= cols * sizeof(DATA_TYPE))) throw invalid_argument("bad stride");
+        }
+
+        MatrixProxy (xt::pytensor<DATA_TYPE, 2> const &obj) {
+            rows = obj.shape(0);
+            cols = obj.shape(1);
+            if (rows <= 1) {
+                stride = (cols * sizeof(DATA_TYPE) + A -1) / A * A;
+            }
+            else {
+                stride = reinterpret_cast<char const *>(&obj(1,0))
+                   - reinterpret_cast<char const *>(&obj(0,0));
+                std::cerr << "STRIDE: " << stride << std::endl;
+            }
             data = reinterpret_cast<uint8_t const *>(&obj(0,0));
             if (stride % A) throw invalid_argument("bad alignment");
             if (!(stride >= cols * sizeof(DATA_TYPE))) throw invalid_argument("bad stride");
