@@ -225,19 +225,6 @@ namespace kgraph {
             if (stride % A) throw invalid_argument("bad alignment");
         }
 #endif
-#ifdef NPY_NDARRAYOBJECT_H
-        /// Construct from NumPy matrix.
-        MatrixProxy (PyArrayObject *obj) {
-            if (!obj || (obj->nd != 2)) throw invalid_argument("bad array shape");
-            rows = obj->dimensions[0];
-            cols = obj->dimensions[1];
-            stride = obj->strides[0];
-            data = reinterpret_cast<uint8_t const *>(obj->data);
-            if (obj->descr->elsize != sizeof(DATA_TYPE)) throw invalid_argument("bad data type size");
-            if (stride % A) throw invalid_argument("bad alignment");
-            if (!(stride >= cols * sizeof(DATA_TYPE))) throw invalid_argument("bad stride");
-        }
-#endif
 #ifdef XTENSOR_ARRAY_HPP
         /// Construct from NumPy matrix.
         MatrixProxy (xt::xtensor<DATA_TYPE, 2> const &obj) {
