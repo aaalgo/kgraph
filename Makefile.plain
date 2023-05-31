@@ -10,11 +10,12 @@ LDLIBS+=-lboost_timer -lboost_chrono -lboost_system -lboost_program_options -lgo
 #FLANN_LIBS+=-lflann_cpp_s -lflann_s
 NABO_LIBS+=-lnabo
 
-.PHONY:	all python clean release deps-ubuntu flann
+.PHONY:	all python clean release deps-ubuntu
 
 COMMON=kgraph.o metric.o
 HEADERS=kgraph.h kgraph-data.h 
-PROGS=resave index search prune split fvec2lshkit txt2lshkit reverse
+#PROGS=resave index search prune split fvec2lshkit txt2lshkit reverse
+PROGS=index search prune #split fvec2lshkit txt2lshkit reverse
 EXTRA_PROGS=test 
 #FLANN_PROGS=flann_index flann_search
 #NABO_PROGS=nabo_search
@@ -25,10 +26,10 @@ all:	libkgraph.a libkgraph.so $(PROGS) python $(EXTRA_PROGS)
 flann:	$(FANN_PROGS)
 
 deps-ubuntu:
-	apt-get install -y libboost-timer-dev libboost-chrono-dev libboost-program-options-dev libboost-system-dev libboost-python-dev libflann-dev python-numpy
+	apt-get install -y libboost-timer-dev libboost-chrono-dev libboost-program-options-dev libboost-system-dev libboost-python-dev python-numpy
 
 RELEASE=kgraph-release
-RELEASE_SRC=Makefile LICENSE kgraph.h kgraph-data.h index.cpp prune.cpp search.cpp flann_index.cpp flann_search.cpp split.cpp fvec2lshkit.cpp
+RELEASE_SRC=Makefile LICENSE kgraph.h kgraph-data.h index.cpp prune.cpp search.cpp
 RELEASE_BIN=libkgraph.a libkgraph.so $(PROGS) #$(FLANN_PROGS)
 
 python:

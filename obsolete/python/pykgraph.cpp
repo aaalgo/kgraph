@@ -473,10 +473,10 @@ BOOST_PYTHON_MODULE(pykgraph)
         .def(python::init<>())
         //.def(python::init<PyObject *, string>())
             //  (python::arg("data"), python::arg("metric") = "euclidean")))
-        .def("load", &KGraph::load)
-        .def("save", &KGraph::save)
-        .def("save_text", &KGraph::save_text)
-        .def("build", &KGraph::build,
+        .def("load", &KGraph::load, "load")
+        .def("save", &KGraph::save, "save")
+        .def("save_text", &KGraph::save_text, "save_text")
+        .def("build", &KGraph::build, "build index",
              (python::arg("data"),
               python::arg("iterations") = kgraph::default_iterations,
               python::arg("L") = kgraph::default_L,
@@ -499,7 +499,6 @@ BOOST_PYTHON_MODULE(pykgraph)
              python::arg("withDistance") = false,
              python::arg("blas") = false))
         ;
-    python::def("load_lshkit", ::load_lshkit);
     python::def("version", kgraph::KGraph::version);
 }
 

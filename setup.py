@@ -1,36 +1,37 @@
-import sys
-import os
-import subprocess
-import numpy
-from distutils.core import setup, Extension
+#!/usr/bin/env python3
+import os, sys
+import numpy as np
+from glob import glob
+import subprocess as sp
+from setuptools import setup, Extension
+from setuptools.command.build_ext import build_ext
 
-VERSION = open('version').read().strip()
-GIT_VERSION = subprocess.check_output("git describe --always", shell=True)
+include_dirs = [np.get_include(),
+        '/usr/local/include',
+        '3rd/pybind11/include',
+        '3rd/xtl/include',
+        '3rd/xtensor/include',
+        '3rd/xtensor-python/include']
+library_dirs = []
+libraries = [
+        'boost_timer',
+        'gomp']
 
-numpy_root = os.path.join(os.path.abspath(os.path.dirname(numpy.__file__)), 'core')
-
-if sys.version_info[0] < 3:
-    boost_python = 'boost_python'
-else:
-    boost_python = 'boost_python3'
-    pass
-
-pykgraph = Extension('pykgraph',
+ext = Extension('pykgraph',
         language = 'c++',
-        extra_compile_args = ['-O3', '-std=c++11', '-msse2', '-fopenmp', '-DKGRAPH_VERSION=%s' % GIT_VERSION],
-        extra_link_args = ['-fopenmp'],
-        include_dirs = ['.', os.path.join(numpy_root, 'include')],
-        libraries = [boost_python, 'boost_timer'],
-        sources = ['kgraph.cpp', 'metric.cpp', 'python/pykgraph.cpp'],
-        depends = ['kgraph.h', 'kgraph-data.h'])
+        extra_compile_args = ['-std=c++17', '-O3', '-g', '-Wno-sign-compare', '-Wno-parentheses', '-DDEBUG', '-Wno-narrowing', '-Wno-attributes', '-Wno-unknown-pragmas', '-fopenmp'], 
+        include_dirs = include_dirs,
+        library_dirs = library_dirs,
+        libraries = libraries,
+        sources = ['python-api.cpp', 'kgraph.cpp', 'metric.cpp']
+        )
 
 setup (name = 'pykgraph',
-       version = '2.0',
-       url = 'https://github.com/aaalgo/kgraph',
+       version = '0.0.1',
        author = 'Wei Dong',
-       author_email = 'wdong@wdong.org',
+       author_email = 'wdong@aaalgo.com',
        license = 'BSD',
-       description = 'Approximate K-NN search',
-       ext_modules = [pykgraph]
+       description = '',
+       ext_modules = [ext],
        )
 

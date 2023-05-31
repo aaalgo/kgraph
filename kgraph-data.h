@@ -235,6 +235,18 @@ namespace kgraph {
             if (!(stride >= cols * sizeof(DATA_TYPE))) throw invalid_argument("bad stride");
         }
 #endif
+#ifdef XTENSOR_ARRAY_HPP
+        /// Construct from NumPy matrix.
+        MatrixProxy (xt::xtensor<DATA_TYPE, 2> const &obj) {
+            rows = obj.shape(0);
+            cols = obj.shape(1);
+            stride = reinterpret_cast<char const *>(&obj(1,0))
+                   - reinterpret_cast<char const *>(&obj(0,0));
+            data = reinterpret_cast<uint8_t const *>(&obj(0,0));
+            if (stride % A) throw invalid_argument("bad alignment");
+            if (!(stride >= cols * sizeof(DATA_TYPE))) throw invalid_argument("bad stride");
+        }
+#endif
 #endif
         unsigned size () const {
             return rows;

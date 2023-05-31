@@ -140,9 +140,6 @@ nodes where the function assumes minimal values.
 KGraph provides a number of [efficient oracle implementation](doc/oracle.md) for
 common tasks. 
 ### [Parameter Tuning](doc/params.md)
-### [API Documentation from Old Web Site](http://www.kgraph.org/index.php?n=Main.API)
 ### [Doxygen Documentation](http://aaalgo.github.io/kgraph/doc/html/annotated.html)
-
-http://www.kgraph.org/
 
 

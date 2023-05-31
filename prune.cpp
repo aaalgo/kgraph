@@ -10,9 +10,10 @@
 #include <cctype>
 #include <random>
 #include <iomanip>
+#include <iostream>
 #include <type_traits>
 #include <boost/timer/timer.hpp>
-#include <boost/tr1/random.hpp>
+//#include <boost/tr1/random.hpp>
 #include <boost/format.hpp>
 #include <boost/program_options.hpp>
 #include "kgraph.h"

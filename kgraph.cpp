@@ -21,9 +21,6 @@ static char const *kgraph_version = STRINGIFY(KGRAPH_VERSION) "-" STRINGIFY(KGRA
 #include <random>
 #include <algorithm>
 #include <boost/timer/timer.hpp>
-#define timer timer_for_boost_progress_t
-#include <boost/progress.hpp>
-#undef timer
 #include <boost/dynamic_bitset.hpp>
 #include <boost/accumulators/accumulators.hpp>
 #include <boost/accumulators/statistics/stats.hpp>
@@ -605,7 +602,6 @@ namespace kgraph {
                     e.flag = false;             // haven't been visited yet
                 }
             }
-            progress_display progress(total, cerr);
             vector<unsigned> todo(graph.size());
             for (unsigned i = 0; i < todo.size(); ++i) todo[i] = i;
             vector<unsigned> new_todo(graph.size());
@@ -619,7 +615,6 @@ namespace kgraph {
                     BOOST_VERIFY(l < v.size());
                     if (v[l].flag) continue; // we have visited this one already
                     v[l].flag = true;        // now we have seen this one
-                    ++progress;
                     unsigned T;
                     {
                         auto &nl = new_L[i];
@@ -636,7 +631,6 @@ namespace kgraph {
                             for (unsigned j = 0; j < new_L[T]; ++j) { // new graph
                                 if (v[ll].id == u[j].id) {
                                     v[ll].flag = true;
-                                    ++progress;
                                     break;
                                 }
                             }
@@ -649,7 +643,6 @@ namespace kgraph {
                                 // must start from l: as item l might not have been checked
                                 // for reverse
                                 if (u[ll].id == T) {
-                                    if (!u[ll].flag) ++progress;
                                     u[ll].flag = true;
                                 }
                             }
@@ -658,7 +651,6 @@ namespace kgraph {
                 }
                 todo.swap(new_todo);
             }
-            BOOST_VERIFY(progress.count() == total);
             M.swap(new_L);
             prune1();
         }
@@ -679,7 +671,6 @@ namespace kgraph {
                 cerr << "Graph completion with reverse edges..." << endl;
                 vector<vector<Neighbor>> ng(graph.size()); // new graph adds on original one
                 //ng = graph;
-                progress_display progress(graph.size(), cerr);
                 for (unsigned i = 0; i < graph.size(); ++i) {
                     auto const &v = graph[i];
                     unsigned K = M[i];
@@ -695,21 +686,17 @@ namespace kgraph {
                         ng[i].push_back(e);
                         ng[e.id].push_back(re);
                     }
-                    ++progress;
                 }
                 graph.swap(ng);
             }
             {
                 cerr << "Reranking edges..." << endl;
-                progress_display progress(graph.size(), cerr);
 #pragma omp parallel for
                 for (unsigned i = 0; i < graph.size(); ++i) {
                     auto &v = graph[i];
                     std::sort(v.begin(), v.end());
                     v.resize(std::unique(v.begin(), v.end()) - v.begin());
                     M[i] = v.size();
-#pragma omp critical
-                    ++progress;
                 }
             }
         }
