@@ -264,7 +264,6 @@ namespace kgraph {
             else {
                 stride = reinterpret_cast<char const *>(&obj(1,0))
                    - reinterpret_cast<char const *>(&obj(0,0));
-                std::cerr << "STRIDE: " << stride << std::endl;
             }
             data = reinterpret_cast<uint8_t const *>(&obj(0,0));
             if (stride % A) throw invalid_argument("bad alignment");
