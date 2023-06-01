@@ -87,15 +87,15 @@ public:
 template <typename DATA_TYPE, typename METRIC>
 class NDArrayOracle: public kgraph::IndexOracle {
     kgraph::MatrixProxy<DATA_TYPE> proxy;
-    vector<float> n2;
+    vector<DATA_TYPE> n2;
 public:
     class SearchOracle: public kgraph::SearchOracle {
         kgraph::MatrixProxy<DATA_TYPE> proxy;
-        float const *proxy_n2;
+        DATA_TYPE const *proxy_n2;
         DATA_TYPE const *query;
         float n2;
     public:
-        SearchOracle (kgraph::MatrixProxy<DATA_TYPE> const &p, float const *p_n2, DATA_TYPE const *q)
+        SearchOracle (kgraph::MatrixProxy<DATA_TYPE> const &p, DATA_TYPE const *p_n2, DATA_TYPE const *q)
             : proxy(p), proxy_n2(p_n2), query(q) {
             n2 = METRIC::norm(q, proxy.dim());
         }

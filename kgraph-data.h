@@ -43,20 +43,19 @@ namespace kgraph {
                 unsigned constexpr inc = b_type::size;
                 unsigned vec_size = size - size % inc;
                 unsigned i = 0;
-                T acc = 0;
+                b_type c = 0;
                 for (; i < vec_size; i += inc) {
                     b_type a = b_type::load_aligned(t1 + i);
                     b_type b = b_type::load_aligned(t2 + i);
                     a -= b;
-                    a *= a;
-                    acc += xsimd::reduce_add(a);
+                    c += a * a;
                 }
+                T acc = xsimd::reduce_add(c);
                 for (; i < size;  ++i) {
                     T a = t1[i];
                     T b = t2[i];
                     a -= b;
-                    a *= a;
-                    acc += a;
+                    acc += a * a;
                 }
                 return acc;
             }
@@ -68,18 +67,17 @@ namespace kgraph {
                 unsigned constexpr inc = b_type::size;
                 unsigned vec_size = size - size % inc;
                 unsigned i = 0;
-                T acc = 0;
+                b_type c = 0;
                 for (; i < vec_size; i += inc) {
                     b_type a = b_type::load_aligned(t1 + i);
                     b_type b = b_type::load_aligned(t2 + i);
-                    a *= b;
-                    acc += xsimd::reduce_add(a);
+                    c += a * b;
                 }
+                T acc = xsimd::reduce_add(c);
                 for (; i < size;  ++i) {
                     T a = t1[i];
                     T b = t2[i];
-                    a *= b;
-                    acc += a;
+                    acc += a * b;
                 }
                 return acc;
             }
@@ -91,16 +89,15 @@ namespace kgraph {
                 unsigned constexpr inc = b_type::size;
                 unsigned vec_size = size - size % inc;
                 unsigned i = 0;
-                T acc = 0;
+                b_type c = 0;
                 for (; i < vec_size; i += inc) {
                     b_type a = b_type::load_aligned(t1 + i);
-                    a *= a;
-                    acc += xsimd::reduce_add(a);
+                    c += a * a;
                 }
+                T acc = xsimd::reduce_add(c);
                 for (; i < size;  ++i) {
                     T a = t1[i];
-                    a *= a;
-                    acc += a;
+                    acc += a * a;
                 }
                 return acc;
             }
