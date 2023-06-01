@@ -12,10 +12,11 @@ a user-provided function.
 * KGraph is among the fastest of libraries for k-NN search according to [recent benchmark](https://github.com/erikbern/ann-benchmarks).
 
 For best generality, the C++ API should be used.  A python wrapper
-is provided under the module name pykgraph, which supports Euclidean
+is provided under the module name kgraph, which supports Euclidean
 and Angular distances on rows of NumPy matrices.
 
 
+!!!`pykgraph` has been renamed to `kgraph`.
 
 # Building and Installation
 
@@ -38,12 +39,12 @@ python setup.py install
 
 ```python
 from numpy import random
-import pykgraph
+import kgraph
 
 dataset = random.rand(1000000, 16)
 query = random.rand(1000, 16)
 
-index = pykgraph.KGraph(dataset, 'euclidean')  # another option is 'angular'
+index = kgraph.KGraph(dataset, 'euclidean')  # another option is 'angular'
 index.build(reverse=-1)                        #
 index.save("index_file");
 # load with index.load("index_file");

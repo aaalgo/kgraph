@@ -409,16 +409,18 @@ public:
     }
 };
 
-PYBIND11_MODULE(pykgraph, module)
+PYBIND11_MODULE(kgraph, module)
 {
+#define STRINGIFY(x) STRINGIFY_HELPER(x)
+#define STRINGIFY_HELPER(x) #x
+    static const char *git_commit = STRINGIFY(GIT_COMMIT);
+    py::dict arch;
+    arch["name"] = kgraph::xsimd_arch::name();
+    arch["alignment"] = kgraph::xsimd_arch::alignment();
     xt::import_numpy();
     module.doc() = "";
-    module.def("arch", []() {
-                py::dict dict;
-                dict["name"] = kgraph::xsimd_arch::name();
-                dict["alignment"] = kgraph::xsimd_arch::alignment();
-                return dict;
-            });
+    module.attr("git_commit") = git_commit;
+    module.attr("arch") = arch;
     py::class_<KGraph>(module, "KGraph") 
         .def(py::init<py::object, string const &>())
         .def("load", &KGraph::load, "load")
