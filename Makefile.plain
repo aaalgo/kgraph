@@ -12,7 +12,7 @@ NABO_LIBS+=-lnabo
 
 .PHONY:	all python clean release deps-ubuntu
 
-COMMON=kgraph.o metric.o
+COMMON=kgraph.o
 HEADERS=kgraph.h kgraph-data.h 
 #PROGS=resave index search prune split fvec2lshkit txt2lshkit reverse
 PROGS=index search prune #split fvec2lshkit txt2lshkit reverse

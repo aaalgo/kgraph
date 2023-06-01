@@ -68,6 +68,22 @@ struct AngularLike {
     }
 };
 
+
+template <typename T>
+class AlignedMatrix: public kgraph::Matrix<T> {
+public:
+    AlignedMatrix (xt::pytensor<T, 2> const &data) {
+        unsigned row = data.shape(0);
+        unsigned col = data.shape(1);
+        this->reset(row, col);
+        for (unsigned i = 0; i < row; ++i) {
+            T const *from = &data(i, 0);
+            T *to = this->operator[](i);
+            std::copy(from, from + col, to);
+        }
+    }
+};
+
 template <typename DATA_TYPE, typename METRIC>
 class NDArrayOracle: public kgraph::IndexOracle {
     kgraph::MatrixProxy<DATA_TYPE> proxy;
@@ -91,7 +107,7 @@ public:
         }
     };
 
-    NDArrayOracle (xt::xtensor<DATA_TYPE, 2> const &data): proxy(data), n2(proxy.size()) {
+    NDArrayOracle (AlignedMatrix<DATA_TYPE> const &data): proxy(data), n2(proxy.size()) {
         for (unsigned i = 0; i < proxy.size(); ++i) {
             n2[i] = METRIC::norm(proxy[i], proxy.dim());
         }
@@ -230,9 +246,10 @@ public:
     }
 };
 
+
 template <typename DATA_TYPE, typename METRIC_TYPE>
 class Impl: public ImplBase {
-    xt::xtensor<float, 2> data;
+    AlignedMatrix<DATA_TYPE> data;
     NDArrayOracle<DATA_TYPE, METRIC_TYPE> oracle; 
 public:
     Impl (py::object obj): data(py::cast<xt::pytensor<DATA_TYPE, 2>>(obj)), oracle(data) {
@@ -247,7 +264,8 @@ public:
     }
 
     py::object search (py::object query, SearchParams params) const {
-        kgraph::MatrixProxy<DATA_TYPE> qmatrix(py::cast<xt::pytensor<DATA_TYPE, 2>>(query));
+        AlignedMatrix<DATA_TYPE> data(py::cast<xt::pytensor<DATA_TYPE, 2>>(query));
+        kgraph::MatrixProxy<DATA_TYPE> qmatrix(data);
         //npy_intp dims[] = {qmatrix.size(), params.K};
         xt::pytensor<uint32_t, 2> result;
         result.resize({size_t(qmatrix.size()), size_t(params.K)});
@@ -395,6 +413,12 @@ PYBIND11_MODULE(pykgraph, module)
 {
     xt::import_numpy();
     module.doc() = "";
+    module.def("arch", []() {
+                py::dict dict;
+                dict["name"] = kgraph::xsimd_arch::name();
+                dict["alignment"] = kgraph::xsimd_arch::alignment();
+                return dict;
+            });
     py::class_<KGraph>(module, "KGraph") 
         .def(py::init<py::object, string const &>())
         .def("load", &KGraph::load, "load")

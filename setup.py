@@ -9,6 +9,7 @@ from setuptools.command.build_ext import build_ext
 include_dirs = [np.get_include(),
         '/usr/local/include',
         '3rd/pybind11/include',
+        '3rd/xsimd/include',
         '3rd/xtl/include',
         '3rd/xtensor/include',
         '3rd/xtensor-python/include']
@@ -20,11 +21,11 @@ libraries = [
 
 ext = Extension('pykgraph',
         language = 'c++',
-        extra_compile_args = ['-DUSE_BLAS=1', '-std=c++17', '-O3', '-g', '-Wno-sign-compare', '-Wno-parentheses', '-DDEBUG', '-Wno-narrowing', '-Wno-attributes', '-Wno-unknown-pragmas', '-fopenmp', '-msse2'], 
+        extra_compile_args = ['-DUSE_BLAS=1', '-std=c++17', '-O3', '-g', '-Wno-sign-compare', '-Wno-parentheses', '-DDEBUG', '-Wno-narrowing', '-Wno-attributes', '-Wno-unknown-pragmas', '-fopenmp', '-march=native'], 
         include_dirs = include_dirs,
         library_dirs = library_dirs,
         libraries = libraries,
-        sources = ['python-api.cpp', 'kgraph.cpp', 'metric.cpp']
+        sources = ['python-api.cpp', 'kgraph.cpp']
         )
 
 setup (name = 'pykgraph',

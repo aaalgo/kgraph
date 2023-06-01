@@ -12,7 +12,7 @@ endif()
 
 find_package(Boost REQUIRED COMPONENTS timer chrono system program_options)
 
-set(LIB_SRC kgraph.cpp metric.cpp)
+set(LIB_SRC kgraph.cpp)
 include_directories(${KGRAPH_SOURCE_DIR})
 add_library(kgraph SHARED ${LIB_SRC})
 add_library(kgrapha STATIC ${LIB_SRC})

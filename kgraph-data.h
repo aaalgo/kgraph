@@ -8,36 +8,27 @@
 #include <fstream>
 #include <stdexcept>
 #include <boost/assert.hpp>
+#include <xsimd/xsimd.hpp>
 
-#ifdef __GNUC__
-#ifdef __AVX__
-#define KGRAPH_MATRIX_ALIGN 32
-#else
-#ifdef __SSE2__
-#define KGRAPH_MATRIX_ALIGN 16
-#else
-#define KGRAPH_MATRIX_ALIGN 4
-#endif
-#endif
-#endif
 
 namespace kgraph {
 
-    /// L2 square distance with AVX instructions.
-    /** AVX instructions have strong alignment requirement for t1 and t2.
-     */
-    extern float float_l2sqr_avx (float const *t1, float const *t2, unsigned dim);
-    /// L2 square distance with SSE2 instructions.
-    extern float float_l2sqr_sse2 (float const *t1, float const *t2, unsigned dim);
-    extern float float_l2sqr_sse2 (float const *, unsigned dim);
-    extern float float_dot_sse2 (float const *, float const *, unsigned dim);
-    /// L2 square distance for uint8_t with SSE2 instructions (for SIFT).
-    extern float uint8_l2sqr_sse2 (uint8_t const *t1, uint8_t const *t2, unsigned dim);
+typedef xsimd::best_arch xsimd_arch;
 
-    extern float float_l2sqr (float const *, float const *, unsigned dim);
-    extern float float_l2sqr (float const *, unsigned dim);
-    extern float float_dot (float const *, float const *, unsigned dim);
+static constexpr size_t KGRAPH_MATRIX_ALIGN = xsimd_arch::alignment();
 
+template <typename T>
+T simd_l2sqr (T const *t1, unsigned dim) {
+}
+
+template <typename T>
+T simd_dot (T const *t1, T const *t2, unsigned dim) {
+}
+
+}
+
+
+namespace kgraph {
 
     using std::vector;
 
@@ -47,43 +38,78 @@ namespace kgraph {
         struct l2sqr {
             template <typename T>
             /// L2 square distance.
-            static float apply (T const *t1, T const *t2, unsigned dim) {
-                float r = 0;
-                for (unsigned i = 0; i < dim; ++i) {
-                    float v = float(t1[i]) - float(t2[i]);
-                    v *= v;
-                    r += v;
+            static T apply (T const *t1, T const *t2, unsigned size) {
+                using b_type = xsimd::batch<T, xsimd_arch>;
+                unsigned constexpr inc = b_type::size;
+                unsigned vec_size = size - size % inc;
+                unsigned i = 0;
+                T acc = 0;
+                for (; i < vec_size; i += inc) {
+                    b_type a = b_type::load_aligned(t1 + i);
+                    b_type b = b_type::load_aligned(t2 + i);
+                    a -= b;
+                    a *= a;
+                    acc += xsimd::reduce_add(a);
                 }
-                return r;
+                for (; i < size;  ++i) {
+                    T a = t1[i];
+                    T b = t2[i];
+                    a -= b;
+                    a *= a;
+                    acc += a;
+                }
+                return acc;
             }
 
             /// inner product.
             template <typename T>
-            static float dot (T const *t1, T const *t2, unsigned dim) {
-                float r = 0;
-                for (unsigned i = 0; i < dim; ++i) {
-                    r += float(t1[i]) *float(t2[i]);
+            static T dot (T const *t1, T const *t2, unsigned size) {
+                using b_type = xsimd::batch<T, xsimd_arch>;
+                unsigned constexpr inc = b_type::size;
+                unsigned vec_size = size - size % inc;
+                unsigned i = 0;
+                T acc = 0;
+                for (; i < vec_size; i += inc) {
+                    b_type a = b_type::load_aligned(t1 + i);
+                    b_type b = b_type::load_aligned(t2 + i);
+                    a *= b;
+                    acc += xsimd::reduce_add(a);
                 }
-                return r;
+                for (; i < size;  ++i) {
+                    T a = t1[i];
+                    T b = t2[i];
+                    a *= b;
+                    acc += a;
+                }
+                return acc;
             }
 
             /// L2 norm.
             template <typename T>
-            static float norm2 (T const *t1, unsigned dim) {
-                float r = 0;
-                for (unsigned i = 0; i < dim; ++i) {
-                    float v = float(t1[i]);
-                    v *= v;
-                    r += v;
+            static float norm2 (T const *t1, unsigned size) {
+                using b_type = xsimd::batch<T, xsimd_arch>;
+                unsigned constexpr inc = b_type::size;
+                unsigned vec_size = size - size % inc;
+                unsigned i = 0;
+                T acc = 0;
+                for (; i < vec_size; i += inc) {
+                    b_type a = b_type::load_aligned(t1 + i);
+                    a *= a;
+                    acc += xsimd::reduce_add(a);
                 }
-                return r;
+                for (; i < size;  ++i) {
+                    T a = t1[i];
+                    a *= a;
+                    acc += a;
+                }
+                return acc;
             }
         };
 
         struct l2 {
             template <typename T>
-            static float apply (T const *t1, T const *t2, unsigned dim) {
-                return sqrt(l2sqr::apply<T>(t1, t2, dim));
+            static T apply (T const *t1, T const *t2, unsigned dim) {
+                return std::sqrt(l2sqr::apply<T>(t1, t2, dim));
             }
         };
     }
@@ -95,7 +121,7 @@ namespace kgraph {
         unsigned row;
         size_t stride;
         char *data;
-
+    protected:
         void reset (unsigned r, unsigned c) {
             row = r;
             col = c;
@@ -210,7 +236,7 @@ namespace kgraph {
         ~MatrixProxy () {
         }
 
-#ifndef __AVX__
+//#ifndef __AVX__
 #ifdef FLANN_DATASET_H_
         /// Construct from FLANN matrix.
         MatrixProxy (flann::Matrix<DATA_TYPE> const &m)
@@ -257,7 +283,7 @@ namespace kgraph {
             if (!(stride >= cols * sizeof(DATA_TYPE))) throw invalid_argument("bad stride");
         }
 #endif
-#endif
+//#endif
         unsigned size () const {
             return rows;
         }
@@ -342,44 +368,6 @@ namespace kgraph {
 
 
 }
-
-#ifndef KGRAPH_NO_VECTORIZE
-#ifdef __GNUC__
-#ifdef __AVX__
-#if 0
-namespace kgraph { namespace metric {
-        template <>
-        inline float l2sqr::apply<float> (float const *t1, float const *t2, unsigned dim) {
-            return float_l2sqr_avx(t1, t2, dim);
-        }
-}}
-#endif
-#else
-#ifdef __SSE2__
-namespace kgraph { namespace metric {
-        template <>
-        inline float l2sqr::apply<float> (float const *t1, float const *t2, unsigned dim) {
-            return float_l2sqr_sse2(t1, t2, dim);
-        }
-        template <>
-        inline float l2sqr::dot<float> (float const *t1, float const *t2, unsigned dim) {
-            return float_dot_sse2(t1, t2, dim);
-        }
-        template <>
-        inline float l2sqr::norm2<float> (float const *t1, unsigned dim) {
-            return float_l2sqr_sse2(t1, dim);
-        }
-        template <>
-        inline float l2sqr::apply<uint8_t> (uint8_t const *t1, uint8_t const *t2, unsigned dim) {
-            return uint8_l2sqr_sse2(t1, t2, dim);
-        }
-}}
-#endif
-#endif
-#endif
-#endif
-
-
 
 #endif
 
