@@ -35,13 +35,12 @@ namespace xsimd
         static constexpr std::size_t alignment() noexcept { return 0; }
         /// Whether this architecture requires aligned memory access.
         static constexpr bool requires_alignment() noexcept { return false; }
-        /// Unique identifier for this architecture.
-        static constexpr unsigned version() noexcept { return generic::version(0, 0, 0); }
         /// Name of the architecture.
         static constexpr char const* name() noexcept { return "generic"; }
+    };
 
-    protected:
-        static constexpr unsigned version(unsigned major, unsigned minor, unsigned patch) noexcept { return major * 10000u + minor * 100u + patch; }
+    struct unsupported
+    {
     };
 }
 

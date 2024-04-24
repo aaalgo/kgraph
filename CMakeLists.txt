@@ -3,7 +3,7 @@ project (KGRAPH)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall -msse2 -O3 -std=c++11 -fPIC")
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall -msse2 -O3 -std=c++17 -fPIC -march=native")
 
 find_package(OpenMP REQUIRED)
 if (OPENMP_FOUND)
@@ -13,7 +13,7 @@ endif()
 find_package(Boost REQUIRED COMPONENTS timer chrono system program_options)
 
 set(LIB_SRC kgraph.cpp)
-include_directories(${KGRAPH_SOURCE_DIR})
+include_directories(${KGRAPH_SOURCE_DIR} ${KGRAPH_SOURCE_DIR}/3rd/xsimd/include)
 add_library(kgraph SHARED ${LIB_SRC})
 add_library(kgrapha STATIC ${LIB_SRC})
 set_target_properties(kgrapha PROPERTIES OUTPUT_NAME kgraph)
